@@ -128,7 +128,6 @@ RC FileHandle::readPage(PageNum pageNum, void *data)
 		return -1; //File not opened
 
 	file_stream->seekg(pageNum*PAGE_SIZE, file_stream->beg); //move to the page read
-
 	file_stream->read((char*)data,PAGE_SIZE);
     readPageCounter++;
     return 0;

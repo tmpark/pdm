@@ -87,6 +87,13 @@ int RBFTest_extra_1(RecordBasedFileManager *rbfm) {
 		rc = rbfm->insertRecord(fileHandle2, recordDescriptor2, record, rid);
 	    assert(rc == success && "Inserting a record should not fail.");
 
+	    if(i%2 == 0)
+	    {
+	    	rbfm->deleteRecord(fileHandle1, recordDescriptor1, rid);
+	    	rbfm->deleteRecord(fileHandle2, recordDescriptor2, rid);
+	    }
+
+
 	    if (i%1000 == 0 && i != 0) {
 	    	cout << i << " / " << numRecords << "records are inserted." << endl;
 	    	compareFileSizes(fileName1, fileName2);

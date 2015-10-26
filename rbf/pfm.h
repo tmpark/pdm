@@ -12,6 +12,13 @@ typedef char byte;
 
 using namespace std;
 
+
+//custom type
+struct FreeSpace{
+	unsigned pageNum;
+	unsigned freeSpace;
+};
+
 class FileHandle;
 
 class PagedFileManager
@@ -35,6 +42,7 @@ private:
 
 class FileHandle
 {
+
 public:
     // variables to keep the counter for each operation
 	unsigned readPageCounter;

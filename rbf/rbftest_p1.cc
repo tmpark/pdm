@@ -53,6 +53,8 @@ int RBFTest_private_1(RecordBasedFileManager *rbfm) {
 
     // Insert a record into a file - referred_topics is an empty string - "", not null value.
 	prepareRecordForTweetMessage(recordDescriptorForTweetMessage.size(), nullsIndicator, 101, 1, 123.4, 1013.45, 0, "", 31, "Finding shortcut_menu was easy.", record, &recordSize);
+
+
     
 	// An empty string should be printed for the referred_topics field.
     cout << endl <<"Data to be inserted:" << endl;

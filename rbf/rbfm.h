@@ -29,6 +29,7 @@ struct Attribute {
     AttrLength length; // attribute length
 };
 
+
 // Comparison Operator (NOT needed for part 1 of the project)
 typedef enum { EQ_OP = 0, // no condition// = 
            LT_OP,      // <
@@ -38,6 +39,17 @@ typedef enum { EQ_OP = 0, // no condition// =
            NE_OP,      // !=
            NO_OP	   // no condition
 } CompOp;
+
+
+
+//custom type
+typedef signed short RecordDic;
+typedef signed short PageDic;
+
+typedef enum {
+	Direct_Rec = 0,
+	Indirect_Rec = 1
+}RecordType;
 
 
 /********************************************************************************
@@ -98,7 +110,8 @@ public:
   RC insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid);
 
   RC readRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data);
-  
+
+
   // This method will be mainly used for debugging/testing. 
   // The format is as follows:
   // field1-name: field1-value  field2-name: field2-value ... \n
@@ -107,15 +120,42 @@ public:
   RC printRecord(const vector<Attribute> &recordDescriptor, const void *data);
 
 
-  //-----------------custom functions
+  //-----------------custom functions--------------------------------------------------------------------------
+
+  //Page Manipulation Function
+  short getRecordOffset(void *pageToProcess,unsigned slot);
+  short getNumOfRecordSlots(void *pageToProcess);
+  short getFreeSpaceOffset(void *pageToProcess);
+  RC setRecordOffset(void *pageToProcess,unsigned slot, PageDic Offset);
+  RC setNumOfRecordSlots(void *pageToProcess, PageDic numOfRecordSlots);
+  RC setFreeSpaceOffset(void *pageToProcess, PageDic offset);
+
+  //Record Manipulation Function
+  RecordDic getRecordFieldOffset(const void *recordToProcess, unsigned fieldNum);
+  RecordDic getNumOfRecord(void *recordToProcess);
+  RecordDic getTombstone(void *recordToProcess);
+  RecordDic getRecordFieldSize(const void *recordToProcess, unsigned fieldNum);
+
+  RC setRecordFieldOffset(void *recordToProcess, unsigned fieldNum, RecordDic offset);
+  RC setNumOfRecord(void *recordToProcess, RecordDic numOfRecordFields);
+  RC setTombstone(void *recordToProcess, RecordDic type);
+
+  RC insertRecordExistingPage(FileHandle &fileHandle, int pageNum, void* pageToProcess, const void *data, int recordSize, RID &rid);
+  RC insertRecordNewPage(FileHandle &fileHandle, int pageNum, const void *data, int recordSize, RID &rid);
+
   unsigned calculateRecordSize(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data);
   RC verifyFreeSpaceForRecord(FileHandle &fileHandle, int pageNum, void *pageToProcess, int recordSize);
+  unsigned getFreeSpaceSize(void *pageToProcess);
 
   unsigned getSizeOfInteriorRecord(const vector<Attribute> &recordDescriptor,const void *exteriorRecord);
-  RC transToInteriorRecord(const vector<Attribute> &recordDescriptor,const void *exterioRecord, void *interiorRecord, unsigned interiorRecordSize);
+  RC transToInteriorRecord(const vector<Attribute> &recordDescriptor,const void *exterioRecord, void *interiorRecord);
 
   unsigned getSizeOfExteriorRecord(const vector<Attribute> &recordDescriptor,const void *interiorRecord);
-  RC transToExteriorRecord(const vector<Attribute> &recordDescriptor,const void *interiorRecord, void *exteriorRecord, unsigned exteriorRecordSize);
+  RC transToExteriorRecord(const vector<Attribute> &recordDescriptor,const void *interiorRecord, void *exteriorRecord);
+
+  RC compactRecords(char *pageToProcess, PageDic from, PageDic to);
+  RC pushRecords(char *pageToProcess, PageDic from, PageDic to);
+  RC readIndirectRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data);
 /******************************************************************************************************************************************************************
 IMPORTANT, PLEASE READ: All methods below this comment (other than the constructor and destructor) are NOT required to be implemented for the part 1 of the project
 ******************************************************************************************************************************************************************/
@@ -126,6 +166,9 @@ IMPORTANT, PLEASE READ: All methods below this comment (other than the construct
 
   RC readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string &attributeName, void *data);
 
+  bool directInsert;
+  void *tempPage;
+  void *tempRecord;
 
   // Scan returns an iterator to allow the caller to go through the results one by one. 
   RC scan(FileHandle &fileHandle,
