@@ -26,6 +26,7 @@ public:
   RC close();
 
   RBFM_ScanIterator rbfm_scanIterator;
+  FileHandle fileHandle;
 
 };
 
@@ -84,6 +85,8 @@ private:
     static int tableID;
     bool admin;
     bool comingFromCreateTable;
+    FileHandle tabFileHandle;
+    FileHandle colFileHandle;
 };
 
 #endif

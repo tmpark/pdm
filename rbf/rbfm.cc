@@ -1192,6 +1192,8 @@ RC RecordBasedFileManager::scan(FileHandle &fileHandle,
 	rbfm_ScanIterator.fileHandle = &fileHandle;
 	rbfm_ScanIterator.value = value;
 	rbfm_ScanIterator.compOp = compOp;
+	rbfm_ScanIterator.tempPage = malloc(sizeof(PAGE_SIZE));
+	rbfm_ScanIterator.tempPage1 = malloc(sizeof(PAGE_SIZE));
 
 	for(unsigned i = 0 ; i < recordDescriptor.size() ; i++)
 	{
@@ -1459,7 +1461,10 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 
 RC RBFM_ScanIterator::close()
 {
-	return -1;
+	RC rc = 0;
+	free(tempPage);
+	free(tempPage1);
+	return rc;
 }
 
 RBFM_ScanIterator :: RBFM_ScanIterator()
@@ -1477,17 +1482,16 @@ RBFM_ScanIterator :: RBFM_ScanIterator()
 	  numOfPages = 0;
 	  numOfRecords = 0;
 
-	  fileHandle = NULL;
-	  tempPage = malloc(sizeof(PAGE_SIZE));
-	  tempPage1 = malloc(sizeof(PAGE_SIZE));
+	  tempPage = NULL;
+	  tempPage1 = NULL;
 
 	  value = NULL;
 	  compOp = EQ_OP;
+	  fileHandle = NULL;
+
 }
 RBFM_ScanIterator :: ~RBFM_ScanIterator()
 {
-	free(tempPage);
-	free(tempPage1);
 }
 
 

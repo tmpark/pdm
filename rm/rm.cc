@@ -23,6 +23,11 @@ RelationManager::RelationManager()
 {
 	admin = false;
 	comingFromCreateTable = false;
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+
+	rbfm->openFile(string(TABLES_TABLE_NAME),tabFileHandle);
+	rbfm->openFile(string(COLUMNS_TABLE_NAME),colFileHandle);
+
 }
 
 RelationManager::~RelationManager()
@@ -41,7 +46,7 @@ RC RelationManager::createCatalog()
     }
 	 */
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
-	if((rbfm->createFile(COLUMNS_TABLE_NAME)))
+	if((rbfm->createFile(string(COLUMNS_TABLE_NAME))))
 	{
 		cerr << "Couldnt create column file." << endl;
 		return 2;
@@ -98,7 +103,7 @@ RC RelationManager::createCatalog()
 
 
 	//Write table info here.
-	createTable(TABLES_TABLE_NAME, attrs);
+	createTable(string(TABLES_TABLE_NAME), attrs);
 
 	/*
     FileHandle catFileHandle;
@@ -149,7 +154,17 @@ RC RelationManager::createCatalog()
 	attr1.length = 4;
 	attrs1.push_back(attr1);
 	//Write table info here.
-	createTable(COLUMNS_TABLE_NAME,attrs1);
+	createTable(string(COLUMNS_TABLE_NAME),attrs1);
+
+	if(tabFileHandle.getFileStream() == NULL)
+	{
+		rbfm->openFile(string(TABLES_TABLE_NAME),tabFileHandle);
+	}
+
+	if(colFileHandle.getFileStream() == NULL)
+	{
+		rbfm->openFile(string(COLUMNS_TABLE_NAME),colFileHandle);
+	}
 
 	/***DELETE THINGS***/
 
@@ -162,7 +177,7 @@ RC RelationManager::createCatalog()
 RC RelationManager::deleteCatalog()
 {
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
-	return rbfm->destroyFile(TABLES_TABLE_NAME) || rbfm->destroyFile(COLUMNS_TABLE_NAME);
+	return rbfm->destroyFile(string(TABLES_TABLE_NAME)) || rbfm->destroyFile(string(COLUMNS_TABLE_NAME));
 }
 
 RC RelationManager::createTable(const string &tableName, const vector<Attribute> &attrs)
@@ -176,27 +191,13 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 	 */
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 
-	if(tableName.compare(COLUMNS_TABLE_NAME) != 0) {
+	if(tableName.compare(string(COLUMNS_TABLE_NAME)) != 0) {
 		if ((rbfm->createFile(tableName))) {
 			cerr << "Couldnt create file." << endl;
 			return 1;
 		}
 	}
 
-	FileHandle tabFileHandle;
-	if((rbfm->openFile(TABLES_TABLE_NAME,tabFileHandle)))
-	{
-		cerr << "Couldnt open table file." << endl;
-		return 2;
-	}
-
-	FileHandle colFileHandle;
-	if((rbfm->openFile(COLUMNS_TABLE_NAME,colFileHandle)))
-	{
-
-		cerr << "Couldnt open column file." << endl;
-		return 3;
-	}
 
 	/*****START OF PREPARING TABLE BUFFER******/
 
@@ -242,11 +243,10 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 	//rbfm->printRecord(attrs,buffer1);
 
 
+	RC rc;
 	//FIXME
 	RID rid;
-	insertTuple(TABLES_TABLE_NAME,buffer, rid);
-
-
+	rc = insertTuple(string(TABLES_TABLE_NAME),buffer, rid);
 
 
 	for(unsigned int i = 0; i < attrs.size(); i++)
@@ -295,16 +295,13 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 		memcpy(buffer, &position, 4);
 		buffer += 4;
 
-
-
 		//FIXME: Do we need to add something else to do column?
 
 		/*****END OF PREPARING BUFFER******/
 
-
 		//FIXME
 		RID rid;
-		insertTuple(COLUMNS_TABLE_NAME,buffer, rid);
+		rc = insertTuple(string(COLUMNS_TABLE_NAME),buffer, rid);
 
 
 		/****TESTING****/
@@ -377,7 +374,7 @@ RC RelationManager::deleteTable(const string &tableName)
 
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 
-	if(scan(TABLES_TABLE_NAME, attr, EQ_OP, &tableName, attributes, rmsiTable))
+	if(scan(string(TABLES_TABLE_NAME), attr, EQ_OP, &tableName, attributes, rmsiTable))
 	{
 		cerr << "Error occured while scanning!" << endl;
 		return 1;
@@ -389,7 +386,7 @@ RC RelationManager::deleteTable(const string &tableName)
 		return 2;
 	}
 
-	deleteTuple(TABLES_TABLE_NAME, rid);
+	deleteTuple(string(TABLES_TABLE_NAME), rid);
 
 
 	RM_ScanIterator rmsiColumn;
@@ -400,7 +397,7 @@ RC RelationManager::deleteTable(const string &tableName)
 	attributes.push_back(returnattr);
 	char rData[50];
 
-	if(scan(COLUMNS_TABLE_NAME, attr, EQ_OP, TableIDPtr, attributes, rmsiColumn))
+	if(scan(string(COLUMNS_TABLE_NAME), attr, EQ_OP, TableIDPtr, attributes, rmsiColumn))
 	{
 		cerr << "Error occured while scanning!" << endl;
 		return 3;
@@ -410,7 +407,7 @@ RC RelationManager::deleteTable(const string &tableName)
 	int x = 1;
 	while(rmsiColumn.getNextTuple(rid,rData) != RM_EOF)
 	{
-		deleteTuple(COLUMNS_TABLE_NAME, rid);
+		deleteTuple(string(COLUMNS_TABLE_NAME), rid);
 		x++;
 	}
 	cout  << x << endl;
@@ -436,7 +433,7 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 	// attributes.push_back(returnattr);
 	char returnedData[16];
 
-	if(scan(TABLES_TABLE_NAME, attr1, EQ_OP, &tableName, attributes, rmsiTable))
+	if(scan(string(TABLES_TABLE_NAME), attr1, EQ_OP, &tableName, attributes, rmsiTable))
 	{
 		cerr << "Error occured while scanning!" << endl;
 		return 1;
@@ -465,7 +462,7 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 	// attributes.push_back(returnattr);
 	char returnedD[150];
 
-	if(scan(COLUMNS_TABLE_NAME, attr1, EQ_OP, tableNameID, attributes, rmsiColumn))
+	if(scan(string(COLUMNS_TABLE_NAME), attr1, EQ_OP, tableNameID, attributes, rmsiColumn))
 	{
 		cerr << "Error occured while scanning!" << endl;
 		return 1;
@@ -495,6 +492,8 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 RC RelationManager::insertTuple(const string &tableName, const void *data, RID &rid)
 {
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+	RC rc = 0;
+
 	vector<Attribute> attrVector;
 	Attribute at;
 	at.name = "version";
@@ -503,7 +502,6 @@ RC RelationManager::insertTuple(const string &tableName, const void *data, RID &
 	attrVector.push_back(at);
 
 	getAttributes(tableName, attrVector);
-	FileHandle filehandle;
 
 	double size = attrVector.size() - 1;
 	int nullInd = ceil(size/8);
@@ -522,7 +520,7 @@ RC RelationManager::insertTuple(const string &tableName, const void *data, RID &
 	// attributes.push_back(returnattr);
 	char returnedData[16];
 
-	if(scan(TABLES_TABLE_NAME, attr, EQ_OP, &tableName, attributes, rmsiTable))
+	if(scan(string(TABLES_TABLE_NAME), attr, EQ_OP, &tableName, attributes, rmsiTable))
 	{
 		cerr << "Error occured while scanning!" << endl;
 		return 1;
@@ -564,7 +562,23 @@ RC RelationManager::insertTuple(const string &tableName, const void *data, RID &
 		memcpy(tempDataPtr + nullInd + 4, (char*)data + nullInd, attrVector.size()*50 - nullInd - 4);
 	}
 
-	rbfm->insertRecord(filehandle, attrVector, tempData, rid);
+	if(tableName.compare(string(TABLES_TABLE_NAME)))
+	{
+		rc = rbfm->insertRecord(tabFileHandle, attrVector, tempData, rid);
+
+	}
+	else if(tableName.compare(string(COLUMNS_TABLE_NAME)))
+	{
+		rbfm->insertRecord(colFileHandle, attrVector, tempData, rid);
+	}
+	else
+	{
+		FileHandle fileHandle;
+		rbfm->openFile(tableName,fileHandle);
+		rbfm->insertRecord(fileHandle, attrVector, tempData, rid);
+		rbfm->closeFile(fileHandle);
+	}
+
 
 	return 0;
 }
@@ -616,7 +630,7 @@ RC RelationManager::updateTuple(const string &tableName, const void *data, const
 	// attributes.push_back(returnattr);
 	char returnedData[16];
 
-	if(scan(TABLES_TABLE_NAME, attr, EQ_OP, &tableName, attributes, rmsiTable))
+	if(scan(string(TABLES_TABLE_NAME), attr, EQ_OP, &tableName, attributes, rmsiTable))
 	{
 		cerr << "Error occured while scanning!" << endl;
 		return 1;
@@ -733,7 +747,11 @@ RC RM_ScanIterator:: getNextTuple(RID &rid, void *data) {
 }
 RC RM_ScanIterator::close()
 {
-	return -1;
+	RC rc = -1;
+	RecordBasedFileManager *rbfm = RecordBasedFileManager :: instance();
+	rc = rbfm->closeFile(fileHandle);
+	rc = rbfm_scanIterator.close();
+	return rc;
 }
 
 
@@ -744,15 +762,34 @@ RC RelationManager::scan(const string &tableName,
 		const vector<string> &attributeNames,
 		RM_ScanIterator &rm_ScanIterator)
 {
+	RecordBasedFileManager *rbfm = RecordBasedFileManager :: instance();
 	vector<Attribute> attrVector;
 	Attribute at;
+	RC rc = 0;
 	at.name = "version";
 	at.type = TypeInt;
 	at.length = 4;
 	attrVector.push_back(at);
 	getAttributes(tableName, attrVector);
-	//return rm_ScanIterator.rbfm->scan(rm_ScanIterator.fileHandle, attrVector, conditionAttribute,
-	//		                        compOp, value, attributeNames, rm_ScanIterator.rbfm_scanIterator);
+
+	if(tableName.compare(string(TABLES_TABLE_NAME)))
+	{
+		rc = rbfm->scan(tabFileHandle, attrVector, conditionAttribute,
+				compOp, value, attributeNames, rm_ScanIterator.rbfm_scanIterator);
+
+	}
+	else if(tableName.compare(string(COLUMNS_TABLE_NAME)))
+	{
+		rc = rbfm->scan(colFileHandle, attrVector, conditionAttribute,
+				compOp, value, attributeNames, rm_ScanIterator.rbfm_scanIterator);
+	}
+	else
+	{
+		rc = rbfm->openFile(tableName,rm_ScanIterator.fileHandle);
+		rc = rbfm->scan(rm_ScanIterator.fileHandle, attrVector, conditionAttribute,
+				compOp, value, attributeNames, rm_ScanIterator.rbfm_scanIterator);
+	}
+	return rc;
 }
 
 
@@ -760,7 +797,6 @@ RC RelationManager::scan(const string &tableName,
 // Extra credit work
 RC RelationManager::dropAttribute(const string &tableName, const string &attributeName)
 {
-
 
 	RID rid;
 	RM_ScanIterator rmsiTable;
@@ -772,7 +808,7 @@ RC RelationManager::dropAttribute(const string &tableName, const string &attribu
 	// attributes.push_back(returnattr);
 	char returnedData[16];
 
-	if(scan(TABLES_TABLE_NAME, attr, EQ_OP, &tableName, attributes, rmsiTable))
+	if(scan(string(TABLES_TABLE_NAME), attr, EQ_OP, &tableName, attributes, rmsiTable))
 	{
 		cerr << "Error occured while scanning!" << endl;
 		return 1;
@@ -785,12 +821,12 @@ RC RelationManager::dropAttribute(const string &tableName, const string &attribu
 	}
 
 	char data[5*50];
-	readTuple(TABLES_TABLE_NAME, rid,data);
+	readTuple(string(TABLES_TABLE_NAME), rid,data);
 	//Update Version
 	int *versionPtr = (int *) (data + 2);
 	int prevVersion = *versionPtr;
 	(*versionPtr)++;
-	updateTuple(TABLES_TABLE_NAME, data,rid);
+	updateTuple(string(TABLES_TABLE_NAME), data,rid);
 
 	RM_ScanIterator rmsiColumn;
 	attr = "table-id";
@@ -804,7 +840,7 @@ RC RelationManager::dropAttribute(const string &tableName, const string &attribu
 	//attributes.push_back(attributeName);
 	char Data[50];
 
-	if(scan(COLUMNS_TABLE_NAME, attr, EQ_OP, tableIDPtr, attributes, rmsiColumn))
+	if(scan(string(COLUMNS_TABLE_NAME), attr, EQ_OP, tableIDPtr, attributes, rmsiColumn))
 	{
 		cerr << "Error occured while scanning!" << endl;
 		return 3;
@@ -816,7 +852,7 @@ RC RelationManager::dropAttribute(const string &tableName, const string &attribu
 		if (prevVersion == *rData) {
 			char tupl[50 * 5];
 			char *tuple = tupl;
-			readTuple(COLUMNS_TABLE_NAME, rid, tuple);
+			readTuple(string(COLUMNS_TABLE_NAME), rid, tuple);
 			tuple++;//Pass null byte
 			int *v = (int *) tuple;//Version number;
 			*v = (*v) + 1;//Updated version number
@@ -834,7 +870,7 @@ RC RelationManager::dropAttribute(const string &tableName, const string &attribu
 				*columnType = TypeDeleted;
 			}
 
-			insertTuple(COLUMNS_TABLE_NAME, Data, rid);
+			insertTuple(string(COLUMNS_TABLE_NAME), Data, rid);
 			cout << "InsertedPage:" << rid.pageNum << "  " << "InsertedSlot:" << rid.slotNum << endl;
 
 		}
@@ -850,13 +886,13 @@ RC RelationManager::dropAttribute(const string &tableName, const string &attribu
         if(tableName.compare(columnName))
         {
             char buffer[5*50];
-            readTuple(COLUMNS_TABLE_NAME, rid, buffer);
+            readTuple(string(COLUMNS_TABLE_NAME), rid, buffer);
             buffer = buffer + 5;  //1 for null and 4 for version_added
             cout << "version_deleted was:" << *((int *) buffer) << endl;
             int *versionD = (int *) buffer;
 	 *versionD = version;//set to tables version.
             cout << "version_deleted is now:" << version << endl;
-            updateTuple(COLUMNS_TABLE_NAME,(buffer - 5),rid);
+            updateTuple(string(COLUMNS_TABLE_NAME),(buffer - 5),rid);
             return 0;
         }
         x++;
@@ -883,7 +919,7 @@ RC RelationManager::addAttribute(const string &tableName, const Attribute &attr)
 	// attributes.push_back(returnattr);
 	char returnedData[16];
 
-	if(scan(TABLES_TABLE_NAME, attr1, EQ_OP, &tableName, attributes, rmsiTable))
+	if(scan(string(TABLES_TABLE_NAME), attr1, EQ_OP, &tableName, attributes, rmsiTable))
 	{
 		cerr << "Error occured while scanning!" << endl;
 		return 1;
@@ -896,12 +932,12 @@ RC RelationManager::addAttribute(const string &tableName, const Attribute &attr)
 	}
 
 	char data[5*50];
-	readTuple(TABLES_TABLE_NAME, rid,data);
+	readTuple(string(TABLES_TABLE_NAME), rid,data);
 	//Update Version
 	int *versionPtr = (int *) (data + 2);
 	int prevVersion = *versionPtr;
 	(*versionPtr)++;
-	updateTuple(TABLES_TABLE_NAME, data,rid);
+	updateTuple(string(TABLES_TABLE_NAME), data,rid);
 
 	RM_ScanIterator rmsiColumn;
 	attr1 = "table-id";
@@ -916,7 +952,7 @@ RC RelationManager::addAttribute(const string &tableName, const Attribute &attr)
 
 
 	char Data[50];
-	if(scan(COLUMNS_TABLE_NAME, attr1, EQ_OP, tableIDPtr, attributes, rmsiColumn))
+	if(scan(string(COLUMNS_TABLE_NAME), attr1, EQ_OP, tableIDPtr, attributes, rmsiColumn))
 	{
 		cerr << "Error occured while scanning!" << endl;
 		return 3;
@@ -928,12 +964,12 @@ RC RelationManager::addAttribute(const string &tableName, const Attribute &attr)
 		if (prevVersion == *rData) {
 			char tupl[50 * 5];
 			char *tuple = tupl;
-			readTuple(COLUMNS_TABLE_NAME, rid, tuple);
+			readTuple(string(COLUMNS_TABLE_NAME), rid, tuple);
 			tuple++;//Pass null byte
 			int *v = (int *) tuple;//Version number;
 			*v = (*v) + 1;//Updated version number
 			i++;
-			insertTuple(COLUMNS_TABLE_NAME, Data, rid);
+			insertTuple(string(COLUMNS_TABLE_NAME), Data, rid);
 			cout << "InsertedPage:" << rid.pageNum << "  " << "InsertedSlot:" << rid.slotNum << endl;
 		}
 	}
@@ -982,7 +1018,7 @@ RC RelationManager::addAttribute(const string &tableName, const Attribute &attr)
 	memcpy(buffer, &position, 4);
 	buffer += 4;
 
-	insertTuple(COLUMNS_TABLE_NAME, buffer, rid);
+	insertTuple(string(COLUMNS_TABLE_NAME), buffer, rid);
 	cout << "InsertedPage:" << rid.pageNum << "  " << "InsertedSlot:" << rid.slotNum << endl;
 
 	//FIXME: Do we need to add something else to do column?
