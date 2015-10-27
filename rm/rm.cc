@@ -23,7 +23,6 @@ RelationManager::RelationManager()
 {
 	admin = false;
 	comingFromCreateTable = false;
-	rbfm = RecordBasedFileManager::instance();
 }
 
 RelationManager::~RelationManager()
@@ -41,7 +40,7 @@ RC RelationManager::createCatalog()
         return 1;
     }
 	 */
-
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 	if((rbfm->createFile(COLUMNS_TABLE_NAME)))
 	{
 		cerr << "Couldnt create column file." << endl;
@@ -162,7 +161,7 @@ RC RelationManager::createCatalog()
 
 RC RelationManager::deleteCatalog()
 {
-
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 	return rbfm->destroyFile(TABLES_TABLE_NAME) || rbfm->destroyFile(COLUMNS_TABLE_NAME);
 }
 
@@ -175,6 +174,7 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
     |flag|version|table id|table name|file name
     ----------------------------------------------------------------------
 	 */
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 
 	if(tableName.compare(COLUMNS_TABLE_NAME) != 0) {
 		if ((rbfm->createFile(tableName))) {
@@ -375,6 +375,8 @@ RC RelationManager::deleteTable(const string &tableName)
 	attributes.push_back(returnattr);
 	char returnedData[16];
 
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+
 	if(scan(TABLES_TABLE_NAME, attr, EQ_OP, &tableName, attributes, rmsiTable))
 	{
 		cerr << "Error occured while scanning!" << endl;
@@ -492,6 +494,7 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 
 RC RelationManager::insertTuple(const string &tableName, const void *data, RID &rid)
 {
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 	vector<Attribute> attrVector;
 	Attribute at;
 	at.name = "version";
@@ -568,6 +571,7 @@ RC RelationManager::insertTuple(const string &tableName, const void *data, RID &
 
 RC RelationManager::deleteTuple(const string &tableName, const RID &rid)
 {
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 	vector<Attribute> attrVector;
 	Attribute at;
 	at.name = "version";
@@ -584,6 +588,7 @@ RC RelationManager::deleteTuple(const string &tableName, const RID &rid)
 
 RC RelationManager::updateTuple(const string &tableName, const void *data, const RID &rid)
 {
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 	vector<Attribute> attrVector;
 	Attribute at;
 	at.name = "version";
@@ -660,6 +665,7 @@ RC RelationManager::updateTuple(const string &tableName, const void *data, const
 
 RC RelationManager::readTuple(const string &tableName, const RID &rid, void *data)
 {
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 	vector<Attribute> attrVector;
 	Attribute at;
 	at.name = "version";
@@ -700,12 +706,13 @@ RC RelationManager::readTuple(const string &tableName, const RID &rid, void *dat
 
 RC RelationManager::printTuple(const vector<Attribute> &attrs, const void *data)
 {
-
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 	return rbfm->printRecord(attrs, data);
 }
 
 RC RelationManager::readAttribute(const string &tableName, const RID &rid, const string &attributeName, void *data)
 {
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 	vector<Attribute> attrVector;
 	Attribute at;
 	at.name = "version";
@@ -744,8 +751,8 @@ RC RelationManager::scan(const string &tableName,
 	at.length = 4;
 	attrVector.push_back(at);
 	getAttributes(tableName, attrVector);
-	return rbfm->scan(fileHandle, attrVector, conditionAttribute,
-			                        compOp, value, attributeNames, rm_ScanIterator.rbfm_scanIterator);
+	//return rm_ScanIterator.rbfm->scan(rm_ScanIterator.fileHandle, attrVector, conditionAttribute,
+	//		                        compOp, value, attributeNames, rm_ScanIterator.rbfm_scanIterator);
 }
 
 

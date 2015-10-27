@@ -115,5 +115,6 @@ int main() {
 	remove("test_private_1");
 
 	RC rcmain = RBFTest_private_1(rbfm);
+
 	return rcmain;
 }

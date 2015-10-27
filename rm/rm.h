@@ -75,8 +75,6 @@ public:
 
   RC dropAttribute(const string &tableName, const string &attributeName);
 
-  RecordBasedFileManager *rbfm;
-
 protected:
   RelationManager();
   ~RelationManager();
