@@ -82,8 +82,8 @@ protected:
 private:
   static RelationManager *_rm;
     static int tableID;
-    bool admin = false;
-    bool comingFromCreateTable = false;
+    bool admin;
+    bool comingFromCreateTable;
 };
 
 #endif

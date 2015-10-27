@@ -1482,7 +1482,7 @@ RBFM_ScanIterator :: RBFM_ScanIterator()
 	  tempPage1 = malloc(sizeof(PAGE_SIZE));
 
 	  value = NULL;
-	  compOp = 0;
+	  compOp = EQ_OP;
 }
 RBFM_ScanIterator :: ~RBFM_ScanIterator()
 {
