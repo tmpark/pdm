@@ -10,6 +10,10 @@
 using namespace std;
 
 # define RM_EOF (-1)  // end of a scan operator
+#define TABLES_TABLE_NAME "Tables"
+#define COLUMNS_TABLE_NAME "Columns"
+
+
 
 // RM_ScanIterator is an iteratr to go through tuples
 class RM_ScanIterator {
@@ -28,6 +32,8 @@ class RelationManager
 {
 public:
   static RelationManager* instance();
+
+
 
   RC createCatalog();
 
@@ -75,6 +81,10 @@ protected:
 
 private:
   static RelationManager *_rm;
+    static int tableID;
+    bool admin = false;
+    bool comingFromCreateTable = false;
 };
 
 #endif
+

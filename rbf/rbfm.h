@@ -18,7 +18,7 @@ typedef struct
 
 
 // Attribute
-typedef enum { TypeInt = 0, TypeReal, TypeVarChar } AttrType;
+typedef enum { TypeInt = 0, TypeReal, TypeVarChar, TypeDeleted} AttrType;
 
 typedef unsigned AttrLength;
 
