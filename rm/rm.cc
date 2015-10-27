@@ -38,14 +38,8 @@ RC RelationManager::createCatalog()
 {
 
 	admin = true;
-	/*
-    if(!(rbfm->createFile(TABLES_TABLE_NAME)))
-    {
-        cerr << "Couldnt create table file." << endl;
-        return 1;
-    }
-	 */
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+
 	if((rbfm->createFile(string(COLUMNS_TABLE_NAME))))
 	{
 		cerr << "Couldnt create column file." << endl;
@@ -190,6 +184,8 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
     ----------------------------------------------------------------------
 	 */
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+
+
 
 	if(tableName.compare(string(COLUMNS_TABLE_NAME)) != 0) {
 		if ((rbfm->createFile(tableName))) {
