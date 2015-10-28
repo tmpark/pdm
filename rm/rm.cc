@@ -206,8 +206,8 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 
 	/*****START OF PREPARING TABLE BUFFER******/
 
-	char *buffer = (char *) malloc(5*50);
-	char *buffer1 = buffer;
+	char *buffer1 = (char *) malloc(5*50);
+	char *buffer = buffer1;
 
 	memset(buffer,0,1);
 	buffer += 1;
@@ -215,6 +215,7 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 	int length = 1;
 	memcpy(buffer, &length, 4);
 	buffer += 4;
+
 	char flag = 'U';   //means user
 	flag = admin ? 'S' : 'U';
 	memcpy(buffer, &flag, 1);
@@ -251,7 +252,7 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 	RC rc;
 	//FIXME
 	RID rid;
-	rc = insertTuple(string(TABLES_TABLE_NAME),buffer, rid);
+	rc = insertTuple(string(TABLES_TABLE_NAME),buffer1, rid);
 
 
 	for(unsigned int i = 0; i < attrs.size(); i++)
@@ -306,7 +307,7 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 
 		//FIXME
 		RID rid;
-		rc = insertTuple(string(COLUMNS_TABLE_NAME),buffer, rid);
+		rc = insertTuple(string(COLUMNS_TABLE_NAME),buffer1, rid);
 
 
 		/****TESTING****/
@@ -351,7 +352,7 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 		attr1.length = 4;
 		attrs1.push_back(attr1);
 
-		rbfm->printRecord(attrs1,buffer1);
+		//rbfm->printRecord(attrs1,buffer1);
 	}
 
 
@@ -378,8 +379,13 @@ RC RelationManager::deleteTable(const string &tableName)
 	char returnedData[16];
 
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+	int size = tableName.length();
+	char s[size + 4];
+	char * str = s;
+	memcpy(str, &size, 4);
+	memcpy(str + 4, tableName.c_str(), size);
 
-	if(scan(string(TABLES_TABLE_NAME), attr, EQ_OP, &tableName, attributes, rmsiTable) != 0)
+	if(scan(string(TABLES_TABLE_NAME), attr, EQ_OP, str, attributes, rmsiTable) != 0)
 	{
 		cerr << "Error occured while scanning!" << endl;
 		return 1;
@@ -442,7 +448,13 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 	// attributes.push_back(returnattr);
 	char returnedData[16];
 
-	if(scan(string(TABLES_TABLE_NAME), attr1, EQ_OP, &tableName, attributes, rmsiTable) != 0)
+	int size = tableName.length();
+	char s[size + 4];
+	char * str = s;
+	memcpy(str, &size, 4);
+	memcpy(str + 4, tableName.c_str(), size);
+
+	if(scan(string(TABLES_TABLE_NAME), attr1, EQ_OP, str, attributes, rmsiTable) != 0)
 	{
 		cerr << "Error occured while scanning!" << endl;
 		return 1;
@@ -518,7 +530,7 @@ RC RelationManager::insertTuple(const string &tableName, const void *data, RID &
 */
 	//if(tableName.compare(string(TABLES_TABLE_NAME)) == 0 || tableName.compare(string(COLUMNS_TABLE_NAME)) == 0)
 	//{
-		getSystemAttributes(tableName, attrVector);
+	getSystemAttributes(tableName, attrVector);
 	//}
 	/*
 	else
@@ -589,20 +601,24 @@ RC RelationManager::insertTuple(const string &tableName, const void *data, RID &
 		memcpy(tempDataPtr + nullInd + 4, (char*)data + nullInd, attrVector.size()*50 - nullInd - 4);
 	}
 */
+	//rbfm->printRecord(attrVector,data);
+
 	if(tableName.compare(string(TABLES_TABLE_NAME)) == 0)
 	{
-		rc = rbfm->insertRecord(tabFileHandle, attrVector, tempData, rid);
+		rc = rbfm->insertRecord(tabFileHandle, attrVector, data, rid);
+
+
 
 	}
 	else if(tableName.compare(string(COLUMNS_TABLE_NAME)) == 0)
 	{
-		rc = rbfm->insertRecord(colFileHandle, attrVector, tempData, rid);
+		rc = rbfm->insertRecord(colFileHandle, attrVector, data, rid);
 	}
 	else
 	{
 		FileHandle fileHandle;
 		rbfm->openFile(tableName,fileHandle);
-		rbfm->insertRecord(fileHandle, attrVector, tempData, rid);
+		rbfm->insertRecord(fileHandle, attrVector, data, rid);
 		rbfm->closeFile(fileHandle);
 	}
 
@@ -778,23 +794,23 @@ RC RelationManager::readTuple(const string &tableName, const RID &rid, void *dat
 		}*/
 
 	//FileHandle  fileHandle;
-	void * tempData = malloc(attrVector.size()*50);
+	//void * tempData = malloc(attrVector.size()*50);
 
 
     if(tableName.compare(string(TABLES_TABLE_NAME)) == 0)
     {
-        rbfm->readRecord(tabFileHandle, attrVector, rid, tempData);
+        rbfm->readRecord(tabFileHandle, attrVector, rid, data);
 
     }
     else if(tableName.compare(string(COLUMNS_TABLE_NAME)) == 0)
     {
-        rbfm->readRecord(colFileHandle, attrVector, rid, tempData);
+        rbfm->readRecord(colFileHandle, attrVector, rid, data);
     }
     else
     {
         FileHandle fileHandle;
         rbfm->openFile(tableName,fileHandle);
-        rbfm->readRecord(fileHandle, attrVector, rid, tempData);
+        rbfm->readRecord(fileHandle, attrVector, rid, data);
         rbfm->closeFile(fileHandle);
     }
 

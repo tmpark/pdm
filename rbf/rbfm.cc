@@ -520,7 +520,6 @@ RC RecordBasedFileManager::insertRecordNewPage(FileHandle &fileHandle, int pageN
 	rid.pageNum = pageNum;
 	rid.slotNum = 0;
 
-
 	return rc;
 }
 
@@ -567,6 +566,8 @@ RC RecordBasedFileManager::insertRecordExistingPage(FileHandle &fileHandle, int 
 }
 
 RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid) {
+
+	printRecord(recordDescriptor,data);
 
 	void *pageToProcess = NULL;//malloc(PAGE_SIZE);
 
@@ -1417,6 +1418,24 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 				unsigned recordFieldOffset = getRecordFieldOffset(recordToRead, conditionAttrFieldNum);
 				char *recordFieldPtr = recordToRead + recordFieldOffset;
 
+				unsigned extractedValueSize = getRecordFieldSize(recordToRead, conditionAttrFieldNum);
+
+				/*---------------------------debug-----------------------------*/
+
+				unsigned first = getRecordFieldOffset(recordToRead,0);
+				unsigned second = getRecordFieldOffset(recordToRead,1);
+				unsigned third = getRecordFieldOffset(recordToRead,2);
+				unsigned fourth = getRecordFieldOffset(recordToRead,3);
+
+				/*-------------------------------------------------------------*/
+
+
+				if (extractedValueSize == -1)//NULL(skip)
+				{
+					currentRecordNum++;
+					continue;
+				}
+
 
 				if (conditionAttrFieldType == TypeInt)
 				{
@@ -1431,12 +1450,11 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 				}
 				else if(conditionAttrFieldType == TypeVarChar)
 				{
-					unsigned extractedValueSize = getRecordFieldSize(recordToRead, conditionAttrFieldNum);
 					string extractedValue = string(recordFieldPtr,extractedValueSize);
 
-				    int comparedStringLen = *((int*)recordFieldPtr);
-                    char *comparedStringChar = recordFieldPtr + sizeof(int);
-                    string comparedValue = string(comparedStringChar, comparedStringLen);
+				    int comparedStringLen = *((int*)value);
+                    char *comparedStringChar = (char*)value + sizeof(int);
+                    string comparedValue(comparedStringChar, comparedStringLen);
 
                     if(compareValues(extractedValue,comparedValue,compOp) == true)
 				    	match = true;
@@ -1471,9 +1489,16 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 				char *indirectRecordToRead = (char*)indirectPage + indirectRecordOffset;
 
 				//same as direct
+
 				unsigned indirectRecordFieldOffset = getRecordFieldOffset(indirectRecordToRead, conditionAttrFieldNum);
 				char *indirectRecordFieldPtr = indirectRecordToRead + indirectRecordFieldOffset;
 
+				unsigned extractedValueSize = getRecordFieldSize(indirectRecordToRead, conditionAttrFieldNum);
+				if(extractedValueSize == -1) // Null
+				{
+					currentRecordNum++;
+					continue;
+				}
 
 				if (conditionAttrFieldType == TypeInt)
 				{
@@ -1489,11 +1514,11 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 				}
 				else if(conditionAttrFieldType == TypeVarChar)
 				{
-					unsigned extractedValueSize = getRecordFieldSize(indirectRecordToRead, conditionAttrFieldNum);
+
 					string extractedValue = string(indirectRecordFieldPtr,extractedValueSize);
 
-				    int comparedStringLen = *((int*)indirectRecordFieldPtr);
-                    char *comparedStringChar = indirectRecordFieldPtr + sizeof(int);
+				    int comparedStringLen = *((int*)value);
+                    char *comparedStringChar = (char*)value + sizeof(int);
                     string comparedValue = string(comparedStringChar, comparedStringLen);
 
                     if(compareValues(extractedValue,comparedValue,compOp) == true)
@@ -1518,7 +1543,6 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 				return 0;
 			}
 		}
-
 		//for next pages
 		numOfRecords = 0;
 		currentPage = NULL;
