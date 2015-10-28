@@ -11,11 +11,11 @@ RecordBasedFileManager* RecordBasedFileManager::_rbf_manager = 0;
 
 RecordBasedFileManager* RecordBasedFileManager::instance()
 {
-    if(!_rbf_manager)
-        _rbf_manager = new RecordBasedFileManager();
+	if(!_rbf_manager)
+		_rbf_manager = new RecordBasedFileManager();
 
 
-    return _rbf_manager;
+	return _rbf_manager;
 }
 
 RecordBasedFileManager::RecordBasedFileManager()
@@ -36,26 +36,26 @@ RecordBasedFileManager::~RecordBasedFileManager()
 RC RecordBasedFileManager::createFile(const string &fileName) {
 
 	RC success = PagedFileManager::instance()->createFile(fileName);
-    return success;
+	return success;
 }
 
 RC RecordBasedFileManager::destroyFile(const string &fileName) {
 
 	RC success = PagedFileManager::instance()->destroyFile(fileName);
-    return success;
+	return success;
 
 }
 
 RC RecordBasedFileManager::openFile(const string &fileName, FileHandle &fileHandle) {
 
 	RC success = PagedFileManager::instance()->openFile(fileName,fileHandle);
-    return success;
+	return success;
 }
 
 RC RecordBasedFileManager::closeFile(FileHandle &fileHandle) {
 
 	RC success = PagedFileManager::instance()->closeFile(fileHandle);
-    return success;
+	return success;
 }
 
 //----------------------------Record related helper-------------------------------------------------------------------
@@ -129,7 +129,7 @@ RC setRecordOffset(void *pageToProcess,unsigned slot, PageDic offset)
 	char *recordDic = (char*)pageToProcess + recordDicOffset;
 	*((PageDic*)recordDic) = offset; //new dictionary to find record(Previous free space offset)
 
-    return 0;
+	return 0;
 }
 
 RC setNumOfRecordSlots(void *pageToProcess, PageDic numOfRecordSlots)
@@ -143,7 +143,7 @@ RC setFreeSpaceOffset(void *pageToProcess, PageDic offset)
 {
 	PageDic recordDicOffset = PAGE_SIZE - sizeof(PageDic);
 	char *recordDic = (char*)pageToProcess + recordDicOffset;
-    *((PageDic*)recordDic) = offset; //new free space
+	*((PageDic*)recordDic) = offset; //new free space
 	return 0;
 }
 
@@ -198,18 +198,18 @@ RC RecordBasedFileManager::transToExteriorRecord(const vector<Attribute> &record
 
 		//RecordDic currentFieldOffset = getRecordFieldOffset(interiorRecord,i);//*((RecordDic*)currentDicSlotPtr);
 		//RecordDic nextFieldOffset = getRecordFieldOffset(interiorRecord,i+1);//*((RecordDic*)nextDicSlotPtr);
-        int fieldSize = getRecordFieldSize(interiorRecord,i);
-        if(fieldSize != -1)
-        {
-		//if(currentFieldOffset >= 0)
-		//{
+		int fieldSize = getRecordFieldSize(interiorRecord,i);
+		if(fieldSize != -1)
+		{
+			//if(currentFieldOffset >= 0)
+			//{
 			//int fieldSize = abs(nextFieldOffset) - currentFieldOffset;
 
 			if(recordDescriptor[i].type == TypeVarChar)
 			{
 				int stringSize = fieldSize;
-			    char *currentExteriorRecordField = exteriorRecordField + exteriorRecordFieldOffset;
-			    *((int*)currentExteriorRecordField) = stringSize;
+				char *currentExteriorRecordField = exteriorRecordField + exteriorRecordFieldOffset;
+				*((int*)currentExteriorRecordField) = stringSize;
 				exteriorRecordFieldOffset = exteriorRecordFieldOffset + sizeof(int);
 			}
 
@@ -224,7 +224,7 @@ RC RecordBasedFileManager::transToExteriorRecord(const vector<Attribute> &record
 
 	}
 
-    return 0;
+	return 0;
 }
 
 
@@ -240,7 +240,7 @@ unsigned RecordBasedFileManager::getSizeOfExteriorRecord(const vector<Attribute>
 	int exteriorRecordSize = 0;
 	exteriorRecordSize= exteriorRecordSize + numberOfBytesForNullIndicator;
 
-    //Calculate exteriorRecord Size
+	//Calculate exteriorRecord Size
 	for (unsigned i = 0 ;i < numberOfFields ; i++)
 	{
 
@@ -282,11 +282,11 @@ unsigned RecordBasedFileManager::getSizeOfInteriorRecord(const vector<Attribute>
 
 	bool nullExist = false;
 
-    unsigned interiorRecordSize = 0;
-    interiorRecordSize = interiorRecordSize + interiorRecordDicSize;
-    int exteriorRecordOffset = 0;
+	unsigned interiorRecordSize = 0;
+	interiorRecordSize = interiorRecordSize + interiorRecordDicSize;
+	int exteriorRecordOffset = 0;
 
-    //Calculate interiorRecord Size
+	//Calculate interiorRecord Size
 	for (unsigned i = 0 ;i < numberOfFields ; i++)
 	{
 		unsigned positionOfByte = floor((double)i / 8);
@@ -297,23 +297,23 @@ unsigned RecordBasedFileManager::getSizeOfInteriorRecord(const vector<Attribute>
 		{
 
 
-		    if(recordDescriptor[i].type == TypeVarChar)
+			if(recordDescriptor[i].type == TypeVarChar)
 			{
-		    	char *stringLength = (char*)exteriorRecordField + exteriorRecordOffset;
-			    exteriorRecordOffset = exteriorRecordOffset + sizeof(int) + *((int*)stringLength); //length field + string
-		        interiorRecordSize = interiorRecordSize + *((int*)stringLength);
+				char *stringLength = (char*)exteriorRecordField + exteriorRecordOffset;
+				exteriorRecordOffset = exteriorRecordOffset + sizeof(int) + *((int*)stringLength); //length field + string
+				interiorRecordSize = interiorRecordSize + *((int*)stringLength);
 
-		    }
-		    else if (recordDescriptor[i].type == TypeInt)
-		    {
-		    	exteriorRecordOffset = exteriorRecordOffset + recordDescriptor[i].length;
-		    	interiorRecordSize = interiorRecordSize + recordDescriptor[i].length;
-		    }
-		    else if (recordDescriptor[i].type ==TypeReal)
-		    {
-		    	exteriorRecordOffset = exteriorRecordOffset + recordDescriptor[i].length;
-		    	interiorRecordSize = interiorRecordSize + recordDescriptor[i].length;
-		    }
+			}
+			else if (recordDescriptor[i].type == TypeInt)
+			{
+				exteriorRecordOffset = exteriorRecordOffset + recordDescriptor[i].length;
+				interiorRecordSize = interiorRecordSize + recordDescriptor[i].length;
+			}
+			else if (recordDescriptor[i].type ==TypeReal)
+			{
+				exteriorRecordOffset = exteriorRecordOffset + recordDescriptor[i].length;
+				interiorRecordSize = interiorRecordSize + recordDescriptor[i].length;
+			}
 		}
 
 	}
@@ -360,49 +360,49 @@ RC RecordBasedFileManager::transToInteriorRecord(const vector<Attribute> &record
 		if(!nullExist)//Not Null Value
 		{
 
-		    if(recordDescriptor[i].type == TypeVarChar)
+			if(recordDescriptor[i].type == TypeVarChar)
 			{
-		    	char *stringLength = (char*)exteriorRecord + exteriorRecordOffset;
-		    	int stringLength_int = *((int*)stringLength);
+				char *stringLength = (char*)exteriorRecord + exteriorRecordOffset;
+				int stringLength_int = *((int*)stringLength);
 
-			    exteriorRecordOffset = exteriorRecordOffset + sizeof(int); //length field
+				exteriorRecordOffset = exteriorRecordOffset + sizeof(int); //length field
 
-			    memcpy((char*)interiorRecord + interiorRecordOffset, (char*)exteriorRecord + exteriorRecordOffset,stringLength_int);
-			    setRecordFieldOffset(interiorRecord,i,interiorRecordOffset);
+				memcpy((char*)interiorRecord + interiorRecordOffset, (char*)exteriorRecord + exteriorRecordOffset,stringLength_int);
+				setRecordFieldOffset(interiorRecord,i,interiorRecordOffset);
 
-			    //*((RecordDic*)interiorRecordDicSlot+i) = (RecordDic)(headerSize + interiorRecordOffset);//Dictionary update
+				//*((RecordDic*)interiorRecordDicSlot+i) = (RecordDic)(headerSize + interiorRecordOffset);//Dictionary update
 
-			    interiorRecordOffset = interiorRecordOffset + stringLength_int;
-			    exteriorRecordOffset = exteriorRecordOffset + stringLength_int;// string
-		    }
-		    else if (recordDescriptor[i].type == TypeInt)
-		    {
+				interiorRecordOffset = interiorRecordOffset + stringLength_int;
+				exteriorRecordOffset = exteriorRecordOffset + stringLength_int;// string
+			}
+			else if (recordDescriptor[i].type == TypeInt)
+			{
 
-		    	memcpy((char*)interiorRecord + interiorRecordOffset, (char*)exteriorRecord + exteriorRecordOffset,recordDescriptor[i].length);
-		    	setRecordFieldOffset(interiorRecord,i,interiorRecordOffset);
-		    	//*((RecordDic*)interiorRecordDicSlot+i) = (RecordDic)(headerSize + interiorRecordOffset);//Dictionary update
+				memcpy((char*)interiorRecord + interiorRecordOffset, (char*)exteriorRecord + exteriorRecordOffset,recordDescriptor[i].length);
+				setRecordFieldOffset(interiorRecord,i,interiorRecordOffset);
+				//*((RecordDic*)interiorRecordDicSlot+i) = (RecordDic)(headerSize + interiorRecordOffset);//Dictionary update
 
-		    	exteriorRecordOffset = exteriorRecordOffset + recordDescriptor[i].length;
-		    	interiorRecordOffset = interiorRecordOffset + recordDescriptor[i].length;
-		    }
-		    else if (recordDescriptor[i].type ==TypeReal)
-		    {
-		    	memcpy((char*)interiorRecord + interiorRecordOffset, (char*)exteriorRecord + exteriorRecordOffset,recordDescriptor[i].length);
-		    	setRecordFieldOffset(interiorRecord,i,interiorRecordOffset);
+				exteriorRecordOffset = exteriorRecordOffset + recordDescriptor[i].length;
+				interiorRecordOffset = interiorRecordOffset + recordDescriptor[i].length;
+			}
+			else if (recordDescriptor[i].type ==TypeReal)
+			{
+				memcpy((char*)interiorRecord + interiorRecordOffset, (char*)exteriorRecord + exteriorRecordOffset,recordDescriptor[i].length);
+				setRecordFieldOffset(interiorRecord,i,interiorRecordOffset);
 
-		    	exteriorRecordOffset = exteriorRecordOffset + recordDescriptor[i].length;
-		    	interiorRecordOffset = interiorRecordOffset + recordDescriptor[i].length;
-		    }
+				exteriorRecordOffset = exteriorRecordOffset + recordDescriptor[i].length;
+				interiorRecordOffset = interiorRecordOffset + recordDescriptor[i].length;
+			}
 		}
 		else//NULL (dictionary update but no offset increase)
 			setRecordFieldOffset(interiorRecord,i,-interiorRecordOffset);
-			//*((RecordDic*)interiorRecordDicSlot+i) = -((RecordDic)(headerSize + interiorRecordOffset));//Dictionary update(Null is minus)
+		//*((RecordDic*)interiorRecordDicSlot+i) = -((RecordDic)(headerSize + interiorRecordOffset));//Dictionary update(Null is minus)
 
 	}
 	setRecordFieldOffset(interiorRecord,numberOfFields,interiorRecordOffset);
 	//*((RecordDic*)interiorRecordDicSlot+numberOfFields) = (RecordDic)(headerSize + interiorRecordOffset);//Dictionary update
 
-    return 0;
+	return 0;
 }
 
 
@@ -415,13 +415,13 @@ unsigned RecordBasedFileManager::calculateRecordSize(FileHandle &fileHandle, con
 
 	for (unsigned i = 0 ;i < numberOfFields ; i++)
 	{
-//        char *currentDicSlotPtr = interiorRecordDicSlot + i*sizeof(RecordDic);
-//        char *nextDicSlotPtr = interiorRecordDicSlot + (i+1)*sizeof(RecordDic);
+		//        char *currentDicSlotPtr = interiorRecordDicSlot + i*sizeof(RecordDic);
+		//        char *nextDicSlotPtr = interiorRecordDicSlot + (i+1)*sizeof(RecordDic);
 		//int currentFieldOffset = getRecordFieldOffset(data,i);//*((RecordDic*)currentDicSlotPtr);
 		//int nextFieldOffset = getRecordFieldOffset(data,i+1);
 
 		//if (currentFieldOffset < 0 ) //minus value: NULL pointer
-			//continue;//Pass
+		//continue;//Pass
 
 		//int fieldSize = abs(nextFieldOffset) - currentFieldOffset; //ABS for next null value
 		int fieldSize = getRecordFieldSize(data,i);
@@ -472,7 +472,7 @@ unsigned RecordBasedFileManager::calculateRecordSize(FileHandle &fileHandle, con
 	return recordSize;
 }
 
-*/
+ */
 
 
 RC RecordBasedFileManager::verifyFreeSpaceForRecord(FileHandle &fileHandle, int pageNum, void *pageToProcess, int recordSize)
@@ -483,20 +483,20 @@ RC RecordBasedFileManager::verifyFreeSpaceForRecord(FileHandle &fileHandle, int 
 
 	if(freeSpaceSize == -1)
 	{
-	    RC rc = fileHandle.readPage(pageNum,pageToProcess);//Read Page
-	    if(rc != 0)
-		    return rc;
+		RC rc = fileHandle.readPage(pageNum,pageToProcess);//Read Page
+		if(rc != 0)
+			return rc;
 
-	    //FreeSpaceSize
-	    freeSpaceSize = getFreeSpaceSize(pageToProcess);
-    }
+		//FreeSpaceSize
+		freeSpaceSize = getFreeSpaceSize(pageToProcess);
+	}
 
-    int spaceToNeed = recordSize + sizeof(PageDic);// + 4096;
-    if(spaceToNeed > freeSpaceSize)
-    {
-	    return -1;
-    }
-    return 0;
+	int spaceToNeed = recordSize + sizeof(PageDic);// + 4096;
+	if(spaceToNeed > freeSpaceSize)
+	{
+		return -1;
+	}
+	return 0;
 }
 
 RC RecordBasedFileManager::insertRecordNewPage(FileHandle &fileHandle, int pageNum, void* pageToProcess, const void *data, int recordSize, RID &rid)
@@ -505,18 +505,18 @@ RC RecordBasedFileManager::insertRecordNewPage(FileHandle &fileHandle, int pageN
 
 	memcpy(pageToProcess,data,recordSize);//Write record
 
-    //update
+	//update
 	setRecordOffset(pageToProcess,0,0);
-    setNumOfRecordSlots(pageToProcess, 1);
+	setNumOfRecordSlots(pageToProcess, 1);
 	setFreeSpaceOffset(pageToProcess, recordSize);
 
 
-    //Insert Page
+	//Insert Page
 	RC rc = fileHandle.appendPage(pageToProcess);
 
 	//free(pageToProcess);
 
-    //update
+	//update
 	rid.pageNum = pageNum;
 	rid.slotNum = 0;
 
@@ -527,7 +527,7 @@ RC RecordBasedFileManager::insertRecordNewPage(FileHandle &fileHandle, int pageN
 
 RC RecordBasedFileManager::insertRecordExistingPage(FileHandle &fileHandle, int pageNum, void* pageToProcess, const void *data, int recordSize, RID &rid)
 {
-    int numOfRecordSlots = getNumOfRecordSlots(pageToProcess);//(int)*((PageDic*)numOfRecordsPtr);
+	int numOfRecordSlots = getNumOfRecordSlots(pageToProcess);//(int)*((PageDic*)numOfRecordsPtr);
 
 
 	//Free space related variable
@@ -550,10 +550,10 @@ RC RecordBasedFileManager::insertRecordExistingPage(FileHandle &fileHandle, int 
 	}
 
 
-    //update
+	//update
 	setRecordOffset(pageToProcess,insertedRecordSlotNum,freeSpaceOffset);
 	if(insertedRecordSlotNum == numOfRecordSlots)
-    	setNumOfRecordSlots(pageToProcess, numOfRecordSlots + 1);
+		setNumOfRecordSlots(pageToProcess, numOfRecordSlots + 1);
 	setFreeSpaceOffset(pageToProcess, freeSpaceOffset + recordSize);
 
 	//WritePage
@@ -567,7 +567,7 @@ RC RecordBasedFileManager::insertRecordExistingPage(FileHandle &fileHandle, int 
 
 RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid) {
 
-	printRecord(recordDescriptor,data);
+	//printRecord(recordDescriptor,data);
 
 	void *pageToProcess = NULL;//malloc(PAGE_SIZE);
 
@@ -587,12 +587,12 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 	}
 
 	void *interiorRecord = tempRecord; //malloc(recordSize);
-    rc = transToInteriorRecord(recordDescriptor,data,interiorRecord);
-    if(rc == -1)
-    {
-    	//free(interiorRecord);
-    	return rc;
-    }
+	rc = transToInteriorRecord(recordDescriptor,data,interiorRecord);
+	if(rc == -1)
+	{
+		//free(interiorRecord);
+		return rc;
+	}
 
 
 	int numOfPages = fileHandle.getNumberOfPages();
@@ -677,7 +677,7 @@ RC RecordBasedFileManager::readIndirectRecord(FileHandle &fileHandle, const vect
 	}
 	return -1;//records other than indirect not allowed
 }
-*/
+ */
 
 RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data) {
 
@@ -725,7 +725,7 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 
 	return rc;
 
-    //return -1;//Do not allow direct read for indirect record and ...
+	//return -1;//Do not allow direct read for indirect record and ...
 }
 
 RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor, const void *data) {
@@ -750,29 +750,29 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
 		{
 
 
-		    if(recordDescriptor[i].type == TypeVarChar)
+			if(recordDescriptor[i].type == TypeVarChar)
 			{
-		    	//Read length of string
-		    	char *stringLength = (char*)data + recordSize;
-		    	recordSize = recordSize + sizeof(int);//string length
-		    	char *stringToPrint_char = (char*)data + recordSize;
+				//Read length of string
+				char *stringLength = (char*)data + recordSize;
+				recordSize = recordSize + sizeof(int);//string length
+				char *stringToPrint_char = (char*)data + recordSize;
 
-		    	string stringToPrint(stringToPrint_char,*((int*)stringLength));
-			    recordSize = recordSize + *((int*)stringLength); //string
-			    cout <<recordDescriptor[i].name << ": "<< stringToPrint;
-		    }
-		    else if (recordDescriptor[i].type == TypeInt)
-		    {
-		    	char *integerToPrint = (char*)data + recordSize;
-		    	cout <<recordDescriptor[i].name << ": "<< *((int*)integerToPrint);
-		    	recordSize = recordSize + recordDescriptor[i].length;
-		    }
-		    else if (recordDescriptor[i].type ==TypeReal)
-		    {
-		    	char *realToPrint = (char*)data + recordSize;
-		    	cout <<recordDescriptor[i].name << ": "<< *((float*)realToPrint);
-		    	recordSize = recordSize + recordDescriptor[i].length;
-		    }
+				string stringToPrint(stringToPrint_char,*((int*)stringLength));
+				recordSize = recordSize + *((int*)stringLength); //string
+				cout <<recordDescriptor[i].name << ": "<< stringToPrint;
+			}
+			else if (recordDescriptor[i].type == TypeInt)
+			{
+				char *integerToPrint = (char*)data + recordSize;
+				cout <<recordDescriptor[i].name << ": "<< *((int*)integerToPrint);
+				recordSize = recordSize + recordDescriptor[i].length;
+			}
+			else if (recordDescriptor[i].type ==TypeReal)
+			{
+				char *realToPrint = (char*)data + recordSize;
+				cout <<recordDescriptor[i].name << ": "<< *((float*)realToPrint);
+				recordSize = recordSize + recordDescriptor[i].length;
+			}
 
 		}
 		else//Null Value
@@ -783,7 +783,7 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
 	}
 	cout << "\n";
 	free(nullsIndicator);
-    return 0;
+	return 0;
 }
 
 
@@ -920,10 +920,10 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 
 
 	//Write Page
-    rc = fileHandle.writePage(rid.pageNum,pageToProcess);
+	rc = fileHandle.writePage(rid.pageNum,pageToProcess);
 
 
-    return rc;
+	return rc;
 }
 
 
@@ -940,7 +940,7 @@ RC RecordBasedFileManager::indirectUpdateRecord(FileHandle &fileHandle, const ve
 	}
 
 	//Find Dictionary Slot
-    PageDic existingRecordOffset = getRecordOffset(pageToProcess,rid.slotNum);
+	PageDic existingRecordOffset = getRecordOffset(pageToProcess,rid.slotNum);
 	char *existingRecord = pageToProcess + existingRecordOffset;
 
 	int existingRecordSize = calculateRecordSize(fileHandle, recordDescriptor, existingRecord);
@@ -951,26 +951,26 @@ RC RecordBasedFileManager::indirectUpdateRecord(FileHandle &fileHandle, const ve
 	{
 		//Overwrite
 		void *interiorRecord = tempRecord; //malloc(recordSize);
-	    rc = transToInteriorRecord(recordDescriptor,data,interiorRecord);
-	    if(rc == -1)
-	    {
-	    	//free(interiorRecord);
-	    	return rc;
-	    }
-		memcpy(existingRecord,data,newRecordSize);
+		rc = transToInteriorRecord(recordDescriptor,data,interiorRecord);
+		if(rc == -1)
+		{
+			//free(interiorRecord);
+			return rc;
+		}
+		memcpy(existingRecord,interiorRecord,newRecordSize);
 
 	}
 	else if(existingRecordSize > newRecordSize)
 	{
 		//Overwrite
 		void *interiorRecord = tempRecord; //malloc(recordSize);
-	    rc = transToInteriorRecord(recordDescriptor,data,interiorRecord);
-	    if(rc == -1)
-	    {
-	    	//free(interiorRecord);
-	    	return rc;
-	    }
-		memcpy(existingRecord,data,newRecordSize);
+		rc = transToInteriorRecord(recordDescriptor,data,interiorRecord);
+		if(rc == -1)
+		{
+			//free(interiorRecord);
+			return rc;
+		}
+		memcpy(existingRecord,interiorRecord,newRecordSize);
 		//Compact
 		rc = compactRecords(pageToProcess,existingRecordOffset+existingRecordSize,existingRecordOffset + newRecordSize);
 		if(rc == -1)
@@ -990,26 +990,25 @@ RC RecordBasedFileManager::indirectUpdateRecord(FileHandle &fileHandle, const ve
 				return rc;
 			}
 			void *interiorRecord = tempRecord; //malloc(recordSize);
-		    rc = transToInteriorRecord(recordDescriptor,data,interiorRecord);
-		    if(rc == -1)
-		    {
-		    	//free(interiorRecord);
-		    	return rc;
-		    }
-			memcpy(existingRecord,data,newRecordSize);
+			rc = transToInteriorRecord(recordDescriptor,data,interiorRecord);
+			if(rc == -1)
+			{
+				//free(interiorRecord);
+				return rc;
+			}
+			memcpy(existingRecord,interiorRecord,newRecordSize);
 		}
 		else
 		{
-			//Delete Indirect Record and notify
-			rc = deleteRecord(fileHandle, recordDescriptor,rid);
+			//another migration not allowed
 			return -2;
 		}
 
 	}
 
-    rc = fileHandle.writePage(rid.pageNum,pageToProcess);
+	rc = fileHandle.writePage(rid.pageNum,pageToProcess);
 
-    return rc;
+	return rc;
 }
 
 RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid)
@@ -1022,11 +1021,12 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 	RC rc = fileHandle.readPage(rid.pageNum,pageToProcess);//Read Page
 	if(rc != 0)
 	{
+		cerr << "Cannot read while updaterecord!" << endl;
 		return rc;
 	}
 
 	//Find Dictionary Slot
-    PageDic existingRecordOffset = getRecordOffset(pageToProcess,rid.slotNum);
+	PageDic existingRecordOffset = getRecordOffset(pageToProcess,rid.slotNum);
 	char *existingRecord = pageToProcess + existingRecordOffset;
 
 
@@ -1054,6 +1054,11 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 		//Find new place for updated record and tombstone update
 		else
 		{
+			//Delete existing indirect record
+			indirectRef = true;
+			rc = deleteRecord(fileHandle, recordDescriptor,indirectRid);
+			indirectRef = false;
+
 			existingRecordSize = 2*sizeof(RecordDic);
 			unsigned difference = newRecordSize - existingRecordSize;
 			unsigned freeSpace = getFreeSpaceSize(pageToProcess);
@@ -1064,17 +1069,18 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 				rc = pushRecords(pageToProcess,existingRecordOffset+existingRecordSize,existingRecordOffset + newRecordSize);
 
 				if(rc == -1)
-				{
+				{   cerr << "Cannot push when updating!" << endl;
 					return rc;
 				}
 
 				void *interiorRecord = tempRecord; //malloc(recordSize);
-			    rc = transToInteriorRecord(recordDescriptor,data,interiorRecord);
-			    if(rc == -1)
-			    {
-			    	//free(interiorRecord);
-			    	return rc;
-			    }
+				rc = transToInteriorRecord(recordDescriptor,data,interiorRecord);
+				if(rc == -1)
+				{
+					cerr << "Cannot transform to interior Record!" << endl;
+					//free(interiorRecord);
+					return rc;
+				}
 				memcpy(existingRecord,interiorRecord,newRecordSize);
 			}
 			//another page to migrate
@@ -1086,6 +1092,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 				indirectRef = false;
 				if(rc == -1)
 				{
+					cerr << "Cannot insert indirect reocrd!" << endl;
 					return rc;
 				}
 				//Tombstone updated
@@ -1102,90 +1109,96 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 	}
 	else
 	{
-    	//Not tombstone
-    	existingRecordSize = calculateRecordSize(fileHandle, recordDescriptor, existingRecord);
-	    if(existingRecordSize == newRecordSize)
-    	{
-	    	//Overwrite
+		//Not tombstone
+		existingRecordSize = calculateRecordSize(fileHandle, recordDescriptor, existingRecord);
+		if(existingRecordSize == newRecordSize)
+		{
+			//Overwrite
 			void *interiorRecord = tempRecord; //malloc(recordSize);
-		    rc = transToInteriorRecord(recordDescriptor,data,interiorRecord);
-		    if(rc == -1)
-		    {
-		    	//free(interiorRecord);
-		    	return rc;
-		    }
-    		memcpy(existingRecord,interiorRecord,newRecordSize);
+			rc = transToInteriorRecord(recordDescriptor,data,interiorRecord);
+			if(rc == -1)
+			{
+				cerr << "Cannot insert indirect reocrd!" << endl;
+				//free(interiorRecord);
+				return rc;
+			}
+			memcpy(existingRecord,interiorRecord,newRecordSize);
 
-    	}
-    	else if(existingRecordSize > newRecordSize)
-	    {
-	    	//Overwrite
+		}
+		else if(existingRecordSize > newRecordSize)
+		{
+			//Overwrite
 			void *interiorRecord = tempRecord; //malloc(recordSize);
-		    rc = transToInteriorRecord(recordDescriptor,data,interiorRecord);
-		    if(rc == -1)
-		    {
-		    	//free(interiorRecord);
-		    	return rc;
-		    }
-	    	memcpy(existingRecord,interiorRecord,newRecordSize);
-	    	//Compact
-	    	rc = compactRecords(pageToProcess,existingRecordOffset+existingRecordSize,existingRecordOffset + newRecordSize);
-    		if(rc == -1)
-    		{
-	    		return rc;
-	    	}
-    	}
-	    else
-	    {
-	    	unsigned difference = newRecordSize - existingRecordSize;
-	    	unsigned freeSpace = getFreeSpaceSize(pageToProcess);
-	    	if(freeSpace >= difference)
-	    	{
-		    	rc = pushRecords(pageToProcess,existingRecordOffset+existingRecordSize,existingRecordOffset + newRecordSize);
-	    		if(rc == -1)
-	    		{
-		    		return rc;
-		    	}
+			rc = transToInteriorRecord(recordDescriptor,data,interiorRecord);
+			if(rc == -1)
+			{
+				cerr << "Cannot transform to interior Record!" << endl;
+				//free(interiorRecord);
+				return rc;
+			}
+			memcpy(existingRecord,interiorRecord,newRecordSize);
+			//Compact
+			rc = compactRecords(pageToProcess,existingRecordOffset+existingRecordSize,existingRecordOffset + newRecordSize);
+			if(rc == -1)
+			{
+				cerr << "Cannot compact records!" << endl;
+				return rc;
+			}
+		}
+		else
+		{
+			unsigned difference = newRecordSize - existingRecordSize;
+			unsigned freeSpace = getFreeSpaceSize(pageToProcess);
+			if(freeSpace >= difference)
+			{
+				rc = pushRecords(pageToProcess,existingRecordOffset+existingRecordSize,existingRecordOffset + newRecordSize);
+				if(rc == -1)
+				{
+					cerr << "Cannot push when updating!" << endl;
+					return rc;
+				}
 				void *interiorRecord = tempRecord; //malloc(recordSize);
-			    rc = transToInteriorRecord(recordDescriptor,data,interiorRecord);
-			    if(rc == -1)
-			    {
-			    	//free(interiorRecord);
-			    	return rc;
-			    }
-	    		memcpy(existingRecord,interiorRecord,newRecordSize);
-	    	}
-	    	else
-	    	{
-	    		//Migrate
-	    		RID forwardedRid;
-	    		indirectRef = true;
-	    		rc = insertRecord(fileHandle,recordDescriptor,data,forwardedRid);
-	    		indirectRef = false;
-		    	if(rc == -1)
-		    	{
-		    		return rc;
-		    	}
-	    		int sizeOfTombstone = 2 * sizeof(RecordDic);
+				rc = transToInteriorRecord(recordDescriptor,data,interiorRecord);
+				if(rc == -1)
+				{
+					cerr << "Cannot transform to interior Record!" << endl;
+					//free(interiorRecord);
+					return rc;
+				}
+				memcpy(existingRecord,interiorRecord,newRecordSize);
+			}
+			else
+			{
+				//Migrate
+				RID forwardedRid;
+				indirectRef = true;
+				rc = insertRecord(fileHandle,recordDescriptor,data,forwardedRid);
+				indirectRef = false;
+				if(rc == -1)
+				{
+					cerr << "Cannot insert indirect reocrd!" << endl;
+					return rc;
+				}
+				int sizeOfTombstone = 2 * sizeof(RecordDic);
 
-	    		//Tombstone created
-	    		RecordDic fowardedPageNum = forwardedRid.pageNum;
-		    	char *fowardedPageNumPtr = (char*)&fowardedPageNum;
-	    		RecordDic fowardedSlotNum = forwardedRid.slotNum;
-		    	char *fowardedSlotNumPtr = (char*)&fowardedSlotNum;
-		    	//insert Tombstone
-		    	memcpy(existingRecord,fowardedPageNumPtr,sizeof(RecordDic));
-		    	memcpy(existingRecord+sizeof(RecordDic),fowardedSlotNumPtr,sizeof(RecordDic));
-			    //compact
-			    compactRecords(pageToProcess,existingRecordOffset+existingRecordSize,existingRecordOffset + sizeOfTombstone);
-		    }
+				//Tombstone created
+				RecordDic fowardedPageNum = forwardedRid.pageNum;
+				char *fowardedPageNumPtr = (char*)&fowardedPageNum;
+				RecordDic fowardedSlotNum = forwardedRid.slotNum;
+				char *fowardedSlotNumPtr = (char*)&fowardedSlotNum;
+				//insert Tombstone
+				memcpy(existingRecord,fowardedPageNumPtr,sizeof(RecordDic));
+				memcpy(existingRecord+sizeof(RecordDic),fowardedSlotNumPtr,sizeof(RecordDic));
+				//compact
+				compactRecords(pageToProcess,existingRecordOffset+existingRecordSize,existingRecordOffset + sizeOfTombstone);
+			}
 
-	    }
+		}
 	}
 
-    rc = fileHandle.writePage(rid.pageNum,pageToProcess);
+	rc = fileHandle.writePage(rid.pageNum,pageToProcess);
 
-    return rc;
+	return rc;
 }
 
 RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string &attributeName, void *data)
@@ -1245,12 +1258,12 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
 }
 
 RC RecordBasedFileManager::scan(FileHandle &fileHandle,
-    const vector<Attribute> &recordDescriptor,
-    const string &conditionAttribute,
-    const CompOp compOp,                  // comparision type such as "<" and "="
-    const void *value,                    // used in the comparison
-    const vector<string> &attributeNames, // a list of projected attributes
-    RBFM_ScanIterator &rbfm_ScanIterator)
+		const vector<Attribute> &recordDescriptor,
+		const string &conditionAttribute,
+		const CompOp compOp,                  // comparision type such as "<" and "="
+		const void *value,                    // used in the comparison
+		const vector<string> &attributeNames, // a list of projected attributes
+		RBFM_ScanIterator &rbfm_ScanIterator)
 {
 
 	rbfm_ScanIterator.numOfPages = fileHandle.getNumberOfPages();
@@ -1259,36 +1272,38 @@ RC RecordBasedFileManager::scan(FileHandle &fileHandle,
 	rbfm_ScanIterator.compOp = compOp;
 	rbfm_ScanIterator.tempPage = tempPage;//malloc(sizeof(PAGE_SIZE));
 	rbfm_ScanIterator.tempPage1 = tempPage1;//malloc(sizeof(PAGE_SIZE));
+	rbfm_ScanIterator.conditionAttrFieldNum = -1;
+	rbfm_ScanIterator.conditionAttrFieldType = -1;
 
 	for(unsigned i = 0 ; i < recordDescriptor.size() ; i++)
 	{
 		//Condition Attribute
 		if(recordDescriptor[i].name.compare(conditionAttribute) == 0)
 		{
-		    rbfm_ScanIterator.conditionAttrFieldNum = i;
-		    rbfm_ScanIterator.conditionAttrFieldType = recordDescriptor[i].type;
-		    break;
+			rbfm_ScanIterator.conditionAttrFieldNum = i;
+			rbfm_ScanIterator.conditionAttrFieldType = recordDescriptor[i].type;
+			break;
 		}
 
-    }
+	}
 
 	for(vector<string>::const_iterator it = attributeNames.begin() ; it != attributeNames.end() ; ++it)
 	{
 		for(unsigned i = 0 ; i < recordDescriptor.size() ; i++)
-	    {
-		   //Projected Attribute construction
-		    if(recordDescriptor[i].name.compare(*it) == 0)
-		    {
-		    	ExtractedAttr extractedAttr;
-		    	extractedAttr.fieldNum = i;
-		    	extractedAttr.type = recordDescriptor[i].type;
-    		    rbfm_ScanIterator.extractedDataDescriptor.push_back(extractedAttr);
-		    }
-        }
+		{
+			//Projected Attribute construction
+			if(recordDescriptor[i].name.compare(*it) == 0)
+			{
+				ExtractedAttr extractedAttr;
+				extractedAttr.fieldNum = i;
+				extractedAttr.type = recordDescriptor[i].type;
+				rbfm_ScanIterator.extractedDataDescriptor.push_back(extractedAttr);
+			}
+		}
 	}
 
 
-    return 0;
+	return 0;
 }
 
 template <typename T>
@@ -1296,32 +1311,32 @@ int compareValues(T const valueExtracted, T const valueCompared, int compOp)
 {
 	switch(compOp)
 	{
-	    case EQ_OP :
-	    	return (valueExtracted == valueCompared);
-	    break;
-	    case LT_OP :
-	    	return (valueExtracted < valueCompared);
+	case EQ_OP :
+		return (valueExtracted == valueCompared);
+		break;
+	case LT_OP :
+		return (valueExtracted < valueCompared);
 
-     	break;
-	    case LE_OP :
-	    	return (valueExtracted <= valueCompared);
+		break;
+	case LE_OP :
+		return (valueExtracted <= valueCompared);
 
-	    break;
-    	case GT_OP :
-    		return (valueExtracted > valueCompared);
+		break;
+	case GT_OP :
+		return (valueExtracted > valueCompared);
 
-        break;
-    	case GE_OP :
-    		return (valueExtracted >= valueCompared);
+		break;
+	case GE_OP :
+		return (valueExtracted >= valueCompared);
 
-        break;
-    	case NE_OP :
-    		return (valueExtracted != valueCompared);
+		break;
+	case NE_OP :
+		return (valueExtracted != valueCompared);
 
-        break;
-	    case NO_OP :
-	    	return true;
-    	break;
+		break;
+	case NO_OP :
+		return true;
+		break;
 	}
 	return -1;
 }
@@ -1329,11 +1344,11 @@ int compareValues(T const valueExtracted, T const valueCompared, int compOp)
 RC projectData(vector<ExtractedAttr> &extractedDataDescriptor, char *recordToRead, void *data)
 {
 	unsigned numberOfFields = extractedDataDescriptor.size();
-    unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
-    unsigned char *nullsIndicator = (unsigned char*)data;
-    memset(nullsIndicator, 0, numberOfBytesForNullIndicator);
+	unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
+	unsigned char *nullsIndicator = (unsigned char*)data;
+	memset(nullsIndicator, 0, numberOfBytesForNullIndicator);
 
-    char *recordField = (char*)data + numberOfBytesForNullIndicator;
+	char *recordField = (char*)data + numberOfBytesForNullIndicator;
 	int recordFieldOffset = 0;
 
 	for (unsigned i = 0 ;i < numberOfFields ; i++)
@@ -1341,15 +1356,15 @@ RC projectData(vector<ExtractedAttr> &extractedDataDescriptor, char *recordToRea
 		unsigned positionOfByte = floor((double)i / 8);
 		unsigned positionOfNullIndicator = i % 8;
 
-	    int fieldSize = getRecordFieldSize(recordToRead,extractedDataDescriptor[i].fieldNum);
-	    if(fieldSize != -1)
-	    {
+		int fieldSize = getRecordFieldSize(recordToRead,extractedDataDescriptor[i].fieldNum);
+		if(fieldSize != -1)
+		{
 			if(extractedDataDescriptor[i].type == TypeVarChar)
 			{
 				int stringSize = fieldSize;
 				char *currentRecordField = recordField + recordFieldOffset;
 				*((int*)currentRecordField) = stringSize;
-		        recordFieldOffset = recordFieldOffset + sizeof(int);
+				recordFieldOffset = recordFieldOffset + sizeof(int);
 			}
 
 			memcpy(recordField + recordFieldOffset, (char*)recordToRead + getRecordFieldOffset(recordToRead,extractedDataDescriptor[i].fieldNum), fieldSize);
@@ -1413,63 +1428,68 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 			if(tombstone == Direct_Rec)
 			{
 				//just read
-				unsigned recordFieldOffset = getRecordFieldOffset(recordToRead, conditionAttrFieldNum);
-				char *recordFieldPtr = recordToRead + recordFieldOffset;
-
-				unsigned extractedValueSize = getRecordFieldSize(recordToRead, conditionAttrFieldNum);
-
-				/*---------------------------debug-----------------------------*/
-
-				unsigned first = getRecordFieldOffset(recordToRead,0);
-				unsigned second = getRecordFieldOffset(recordToRead,1);
-				unsigned third = getRecordFieldOffset(recordToRead,2);
-				unsigned fourth = getRecordFieldOffset(recordToRead,3);
-
-				/*-------------------------------------------------------------*/
-
-
-				if (extractedValueSize == -1)//NULL(skip)
+				if(compOp == NO_OP)
+					match = true;
+				else
 				{
-					currentRecordNum++;
-					continue;
-				}
+					unsigned recordFieldOffset = getRecordFieldOffset(recordToRead, conditionAttrFieldNum);
+					char *recordFieldPtr = recordToRead + recordFieldOffset;
+
+					unsigned extractedValueSize = getRecordFieldSize(recordToRead, conditionAttrFieldNum);
+
+					/*---------------------------debug-----------------------------*/
+
+					unsigned first = getRecordFieldOffset(recordToRead,0);
+					unsigned second = getRecordFieldOffset(recordToRead,1);
+					unsigned third = getRecordFieldOffset(recordToRead,2);
+					unsigned fourth = getRecordFieldOffset(recordToRead,3);
+
+					/*-------------------------------------------------------------*/
 
 
-				if (conditionAttrFieldType == TypeInt)
-				{
-				    if(compareValues(*((int*)recordFieldPtr), *((int*)value),compOp) == true)
-				    	match = true;
+					if (extractedValueSize == -1)//NULL(skip)
+					{
+						currentRecordNum++;
+						continue;
+					}
 
-				}
-				else if (conditionAttrFieldType == TypeReal)
-				{
-				    if(compareValues(*((float*)recordFieldPtr), *((float*)value),compOp) == true)
-				    	match = true;
-				}
-				else if(conditionAttrFieldType == TypeVarChar)
-				{
-					string extractedValue = string(recordFieldPtr,extractedValueSize);
 
-				    int comparedStringLen = *((int*)value);
-                    char *comparedStringChar = (char*)value + sizeof(int);
-                    string comparedValue(comparedStringChar, comparedStringLen);
+					if (conditionAttrFieldType == TypeInt)
+					{
+						if(compareValues(*((int*)recordFieldPtr), *((int*)value),compOp) == true)
+							match = true;
 
-                    if(compareValues(extractedValue,comparedValue,compOp) == true)
-				    	match = true;
+					}
+					else if (conditionAttrFieldType == TypeReal)
+					{
+						if(compareValues(*((float*)recordFieldPtr), *((float*)value),compOp) == true)
+							match = true;
+					}
+					else if(conditionAttrFieldType == TypeVarChar)
+					{
+						string extractedValue = string(recordFieldPtr,extractedValueSize);
 
+						int comparedStringLen = *((int*)value);
+						char *comparedStringChar = (char*)value + sizeof(int);
+						string comparedValue(comparedStringChar, comparedStringLen);
+
+						if(compareValues(extractedValue,comparedValue,compOp) == true)
+							match = true;
+
+					}
 				}
 				if(match)
 				{
-			    	rid.pageNum = i;
-			    	rid.slotNum = j;
-			    	//Data copy
-		    		projectData(extractedDataDescriptor, recordToRead, data);
+					rid.pageNum = i;
+					rid.slotNum = j;
+					//Data copy
+					projectData(extractedDataDescriptor, recordToRead, data);
 				}
 
 
 			}
 			else if(tombstone == Indirect_Rec){}
-				//ignore
+			//ignore
 			else
 			{
 				RID indirectRid;
@@ -1486,50 +1506,54 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 				PageDic indirectRecordOffset = getRecordOffset(indirectPage,indirectRid.slotNum);
 				char *indirectRecordToRead = (char*)indirectPage + indirectRecordOffset;
 
-				//same as direct
+				if(compOp == NO_OP)
+					match = true;
+				else{
 
-				unsigned indirectRecordFieldOffset = getRecordFieldOffset(indirectRecordToRead, conditionAttrFieldNum);
-				char *indirectRecordFieldPtr = indirectRecordToRead + indirectRecordFieldOffset;
+					//same as direct
 
-				unsigned extractedValueSize = getRecordFieldSize(indirectRecordToRead, conditionAttrFieldNum);
-				if(extractedValueSize == -1) // Null
-				{
-					currentRecordNum++;
-					continue;
-				}
+					unsigned indirectRecordFieldOffset = getRecordFieldOffset(indirectRecordToRead, conditionAttrFieldNum);
+					char *indirectRecordFieldPtr = indirectRecordToRead + indirectRecordFieldOffset;
 
-				if (conditionAttrFieldType == TypeInt)
-				{
-				    if(compareValues(*((int*)indirectRecordFieldPtr), *((int*)value),compOp) == true)
-				    	match = true;
+					unsigned extractedValueSize = getRecordFieldSize(indirectRecordToRead, conditionAttrFieldNum);
+					if(extractedValueSize == -1) // Null
+					{
+						currentRecordNum++;
+						continue;
+					}
 
-				}
-				else if (conditionAttrFieldType == TypeReal)
-				{
-				    if(compareValues(*((float*)indirectRecordFieldPtr), *((float*)value),compOp) == true)
-				    	match = true;
+					if (conditionAttrFieldType == TypeInt)
+					{
+						if(compareValues(*((int*)indirectRecordFieldPtr), *((int*)value),compOp) == true)
+							match = true;
 
-				}
-				else if(conditionAttrFieldType == TypeVarChar)
-				{
+					}
+					else if (conditionAttrFieldType == TypeReal)
+					{
+						if(compareValues(*((float*)indirectRecordFieldPtr), *((float*)value),compOp) == true)
+							match = true;
 
-					string extractedValue = string(indirectRecordFieldPtr,extractedValueSize);
+					}
+					else if(conditionAttrFieldType == TypeVarChar)
+					{
 
-				    int comparedStringLen = *((int*)value);
-                    char *comparedStringChar = (char*)value + sizeof(int);
-                    string comparedValue = string(comparedStringChar, comparedStringLen);
+						string extractedValue = string(indirectRecordFieldPtr,extractedValueSize);
 
-                    if(compareValues(extractedValue,comparedValue,compOp) == true)
-				    	match = true;
+						int comparedStringLen = *((int*)value);
+						char *comparedStringChar = (char*)value + sizeof(int);
+						string comparedValue = string(comparedStringChar, comparedStringLen);
 
+						if(compareValues(extractedValue,comparedValue,compOp) == true)
+							match = true;
 
+					}
 				}
 				if(match)
 				{
-			    	rid.pageNum = i;
-			    	rid.slotNum = j;
-			    	//Data copy
-		    		projectData(extractedDataDescriptor, indirectRecordToRead, data);
+					rid.pageNum = i;
+					rid.slotNum = j;
+					//Data copy
+					projectData(extractedDataDescriptor, indirectRecordToRead, data);
 				}
 
 			}
@@ -1560,25 +1584,25 @@ RC RBFM_ScanIterator::close()
 
 RBFM_ScanIterator :: RBFM_ScanIterator()
 {
-	  //attributeListProjected = 0;
-	  conditionAttrFieldNum = 0;
-	  conditionAttrFieldType = 0;
+	//attributeListProjected = 0;
+	conditionAttrFieldNum = 0;
+	conditionAttrFieldType = 0;
 
-	  currentPageNum = 0;
-	  currentPage = NULL;
+	currentPageNum = 0;
+	currentPage = NULL;
 
-	  currentRecordNum = 0;
-	  currentRecord = NULL;
+	currentRecordNum = 0;
+	currentRecord = NULL;
 
-	  numOfPages = 0;
-	  numOfRecords = 0;
+	numOfPages = 0;
+	numOfRecords = 0;
 
-	  tempPage = NULL;
-	  tempPage1 = NULL;
+	tempPage = NULL;
+	tempPage1 = NULL;
 
-	  value = NULL;
-	  compOp = EQ_OP;
-	  fileHandle = NULL;
+	value = NULL;
+	compOp = EQ_OP;
+	fileHandle = NULL;
 
 }
 RBFM_ScanIterator :: ~RBFM_ScanIterator()
@@ -1654,5 +1678,5 @@ RBFM_ScanIterator :: ~RBFM_ScanIterator()
     free(interiorRecord);
     free(exteriorRecord);
 
-*/
+ */
 /****************************debug*/

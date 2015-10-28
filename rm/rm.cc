@@ -393,7 +393,7 @@ RC RelationManager::deleteTable(const string &tableName)
 
 	if(rmsiTable.getNextTuple(rid, returnedData) == RM_EOF)
 	{
-		cerr << "Error occured while getting next tuple!" << endl;
+		//cerr << "Error occured while getting next tuple!" << endl;
 		return 2;
 	}
 
@@ -530,7 +530,9 @@ RC RelationManager::insertTuple(const string &tableName, const void *data, RID &
 */
 	//if(tableName.compare(string(TABLES_TABLE_NAME)) == 0 || tableName.compare(string(COLUMNS_TABLE_NAME)) == 0)
 	//{
-	getSystemAttributes(tableName, attrVector);
+	rc = getSystemAttributes(tableName, attrVector);
+	if(rc != 0)
+		return -1;//get attribute info failed
 	//}
 	/*
 	else
@@ -640,7 +642,9 @@ RC RelationManager::deleteTuple(const string &tableName, const RID &rid)
 */
 	//if(tableName.compare(string(TABLES_TABLE_NAME)) == 0 || tableName.compare(string(COLUMNS_TABLE_NAME)) == 0)
 	//{
-			getSystemAttributes(tableName, attrVector);
+	RC rc = getSystemAttributes(tableName, attrVector);
+			if(rc != 0)
+				return -1;//get attribute info failed
 	//}
 	/*
 	else
@@ -681,7 +685,9 @@ RC RelationManager::updateTuple(const string &tableName, const void *data, const
 */
 	//if(tableName.compare(string(TABLES_TABLE_NAME)) == 0 || tableName.compare(string(COLUMNS_TABLE_NAME)) == 0)
 		//{
-			getSystemAttributes(tableName, attrVector);
+	RC rc =getSystemAttributes(tableName, attrVector);
+	if(rc != 0)
+		return -1;//get attribute info failed
 		//}
 			/*
 		else
@@ -786,7 +792,9 @@ RC RelationManager::readTuple(const string &tableName, const RID &rid, void *dat
 */
 	//if(tableName.compare(string(TABLES_TABLE_NAME)) == 0 || tableName.compare(string(COLUMNS_TABLE_NAME)) == 0)
 		//{
-			getSystemAttributes(tableName, attrVector);
+	rc = getSystemAttributes(tableName, attrVector);
+	if(rc != 0)
+		return -1;//get attribute info failed
 		//}
 			/*
 		else
@@ -863,7 +871,9 @@ RC RelationManager::readAttribute(const string &tableName, const RID &rid, const
 
 	//if(tableName.compare(string(TABLES_TABLE_NAME)) == 0 || tableName.compare(string(COLUMNS_TABLE_NAME)) == 0)
 		//{
-			getSystemAttributes(tableName, attrVector);
+	RC rc = getSystemAttributes(tableName, attrVector);
+	if(rc != 0)
+		return -1;//get attribute info failed
 		//}
 			/*
 		else
@@ -932,7 +942,9 @@ RC RelationManager::scan(const string &tableName,
 	attrs.push_back(attr);
 */
 
-	getSystemAttributes(tableName, attrs);
+	rc = getSystemAttributes(tableName, attrs);
+	if(rc != 0)
+		return -1;//get attribute info failed
 
 	if(tableName.compare(string(TABLES_TABLE_NAME)) == 0)
 	{
@@ -957,6 +969,7 @@ RC RelationManager::scan(const string &tableName,
 RC RelationManager::getSystemAttributes(const string &tableName, vector<Attribute> &attrs)
 {
 	Attribute attr;
+	RC rc = -1;
 	if(tableName.compare(string(TABLES_TABLE_NAME)) == 0)
 	{
 		attr.name = "flag";
@@ -983,6 +996,7 @@ RC RelationManager::getSystemAttributes(const string &tableName, vector<Attribut
 		attr.type = TypeVarChar;
 		attr.length = 50;
 		attrs.push_back(attr);
+		rc = 0;
 	}
 	else if(tableName.compare(string(COLUMNS_TABLE_NAME)) == 0)
 	{
@@ -1023,12 +1037,13 @@ RC RelationManager::getSystemAttributes(const string &tableName, vector<Attribut
 		attr.type = TypeInt;
 		attr.length = 4;
 		attrs.push_back(attr);
+		rc = 0;
 	}
 	else
 	{
-		getAttributes(tableName, attrs);
+		rc = getAttributes(tableName, attrs);
 	}
-	return 0;
+	return rc;
 }
 
 // Extra credit work
