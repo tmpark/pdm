@@ -894,11 +894,11 @@ RC RelationManager::readAttribute(const string &tableName, const RID &rid, const
 RC RM_ScanIterator:: getNextTuple(RID &rid, void *data) {
 	return rbfm_scanIterator.getNextRecord(rid,data);
 }
+
 RC RM_ScanIterator::close()
 {
 	RC rc = -1;
 	RecordBasedFileManager *rbfm = RecordBasedFileManager :: instance();
-	rc = rbfm->closeFile(fileHandle);
 	rc = rbfm_scanIterator.close();
 	return rc;
 }
