@@ -1191,10 +1191,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string &attributeName, void *data)
 {
 	//Find Page and Read
-	char *pageToProcess = (char*)tempPage;//(char*)malloc(PAGE_SIZE);
-
-	//Find Page and Read
-	pageToProcess = NULL;
+	char *pageToProcess = NULL;
 	if(indirectRef == false)
 		pageToProcess = (char*)tempPage;
 	else
@@ -1238,8 +1235,9 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
 			}
 			else  //NULL
 				memset(data,1,1);
+			return 0;
 		}
-		return 0;
+
 	}
 
 	return -1;
