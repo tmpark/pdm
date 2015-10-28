@@ -544,8 +544,8 @@ RC RelationManager::insertTuple(const string &tableName, const void *data, RID &
 	int nullInd = ceil(size/8);
 
 
-	char tempData[attrVector.size()*50];
-	char *tempDataPtr = tempData;
+	//char tempData[attrVector.size()*50];
+	//char *tempDataPtr = tempData;
 
 	//RID ridt;
 /*	RM_ScanIterator rmsiTable;
@@ -695,8 +695,8 @@ RC RelationManager::updateTuple(const string &tableName, const void *data, const
 	int nullInd = ceil(size/8);
 
 
-	char tempData[attrVector.size()*50];
-	char *tempDataPtr = tempData;
+	//char tempData[attrVector.size()*50];
+	//char *tempDataPtr = tempData;
 
 /*	RID ridt;
 	RM_ScanIterator rmsiTable;
@@ -754,18 +754,18 @@ RC RelationManager::updateTuple(const string &tableName, const void *data, const
 */
     if(tableName.compare(string(TABLES_TABLE_NAME)) == 0)
     {
-        rbfm->updateRecord(tabFileHandle, attrVector, tempData, rid);
+        rbfm->updateRecord(tabFileHandle, attrVector, data, rid);
 
     }
     else if(tableName.compare(string(COLUMNS_TABLE_NAME)) == 0)
     {
-        rbfm->updateRecord(colFileHandle, attrVector, tempData, rid);
+        rbfm->updateRecord(colFileHandle, attrVector, data, rid);
     }
     else
     {
         FileHandle fileHandle;
         rbfm->openFile(tableName,fileHandle);
-        rbfm->updateRecord(fileHandle, attrVector, tempData, rid);
+        rbfm->updateRecord(fileHandle, attrVector, data, rid);
         rbfm->closeFile(fileHandle);
     }
 
