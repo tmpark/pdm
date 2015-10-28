@@ -229,7 +229,7 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 	buffer += 4;
 
 	int nameSize = tableName.length();
-	cout<<nameSize<<endl;
+	//cout<<nameSize<<endl;
 
 	memcpy(buffer, &nameSize, 4);
 	buffer += 4;
@@ -423,7 +423,7 @@ RC RelationManager::deleteTable(const string &tableName)
 		deleteTuple(string(COLUMNS_TABLE_NAME), rid);
 		x++;
 	}
-	cout  << x << endl;
+	//cout  << x << endl;
 
 	rmsiColumn.close();
 
@@ -501,7 +501,7 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 		a.name = string(data, *nameLength);
 		data += *nameLength;
 		a.type = *((AttrType *) data);
-		cout << "type: " << a.type << endl;
+		//cout << "type: " << a.type << endl;
 		data += 4;
 		a.length = *((int *) data);
 		attrs.push_back(a);
@@ -776,6 +776,7 @@ RC RelationManager::readTuple(const string &tableName, const RID &rid, void *dat
 {
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 	vector<Attribute> attrVector;
+	RC rc = -1;
 	/*
 	Attribute at;
 	at.name = "version";
@@ -799,18 +800,18 @@ RC RelationManager::readTuple(const string &tableName, const RID &rid, void *dat
 
     if(tableName.compare(string(TABLES_TABLE_NAME)) == 0)
     {
-        rbfm->readRecord(tabFileHandle, attrVector, rid, data);
+        rc = rbfm->readRecord(tabFileHandle, attrVector, rid, data);
 
     }
     else if(tableName.compare(string(COLUMNS_TABLE_NAME)) == 0)
     {
-        rbfm->readRecord(colFileHandle, attrVector, rid, data);
+        rc = rbfm->readRecord(colFileHandle, attrVector, rid, data);
     }
     else
     {
         FileHandle fileHandle;
         rbfm->openFile(tableName,fileHandle);
-        rbfm->readRecord(fileHandle, attrVector, rid, data);
+        rc = rbfm->readRecord(fileHandle, attrVector, rid, data);
         rbfm->closeFile(fileHandle);
     }
 
@@ -840,7 +841,7 @@ RC RelationManager::readTuple(const string &tableName, const RID &rid, void *dat
 	charData += x;
 	memcpy(data, tempData, attrVector.size()*50 - nullInd - 4);
 */
-	return -0;
+	return rc;
 }
 
 RC RelationManager::printTuple(const vector<Attribute> &attrs, const void *data)
