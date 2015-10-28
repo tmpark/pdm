@@ -484,7 +484,7 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 	// attributes.push_back(returnattr);
 	char returnedD[150];
 
-	if(scan(string(COLUMNS_TABLE_NAME), attr1, EQ_OP, tableNameID, attributes, rmsiColumn) == 0)
+	if(scan(string(COLUMNS_TABLE_NAME), attr1, EQ_OP, tableNameID, attributes, rmsiColumn) != 0)
 	{
 		cerr << "Error occured while scanning!" << endl;
 		return 1;
