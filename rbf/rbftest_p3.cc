@@ -94,6 +94,7 @@ int RBFTest_private_3(RecordBasedFileManager *rbfm) {
 		rids.push_back(rid);
 
 
+
 		prepareLargeRecordForTweetMessage(recordDescriptorForTweetMessage.size(), nullsIndicator2, i, record2, &size2);
 
 		rc = rbfm->insertRecord(fileHandle2, recordDescriptorForTweetMessage,
@@ -105,6 +106,8 @@ int RBFTest_private_3(RecordBasedFileManager *rbfm) {
 		if (i%5000 == 0 && i != 0) {
 			cout << i << " / " << numRecords << " records inserted so far for both files." << endl;
 		}
+
+
 	}
 
 	cout << "Inserting " << numRecords << " records done for the both files." << endl << endl;

@@ -46,6 +46,21 @@ RC RelationManager::createCatalog()
 		return 2;
 	}
 
+	if((rbfm->createFile(string(TABLES_TABLE_NAME))))
+	{
+		cerr << "Couldnt create column file." << endl;
+		return 2;
+	}
+
+	if(tabFileHandle.getFileStream() == NULL)
+	{
+		rbfm->openFile(string(TABLES_TABLE_NAME),tabFileHandle);
+	}
+
+	if(colFileHandle.getFileStream() == NULL)
+	{
+		rbfm->openFile(string(COLUMNS_TABLE_NAME),colFileHandle);
+	}
 	/*
     FileHandle tabFileHandle;
     if(!(rbfm->openFile(TABLES_TABLE_NAME,tabFileHandle)))
@@ -150,15 +165,7 @@ RC RelationManager::createCatalog()
 	//Write table info here.
 	createTable(string(COLUMNS_TABLE_NAME),attrs1);
 
-	if(tabFileHandle.getFileStream() == NULL)
-	{
-		rbfm->openFile(string(TABLES_TABLE_NAME),tabFileHandle);
-	}
 
-	if(colFileHandle.getFileStream() == NULL)
-	{
-		rbfm->openFile(string(COLUMNS_TABLE_NAME),colFileHandle);
-	}
 
 	/***DELETE THINGS***/
 
@@ -187,7 +194,7 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 
 
 
-	if(tableName.compare(string(COLUMNS_TABLE_NAME)) != 0) {
+	if(tableName.compare(string(COLUMNS_TABLE_NAME)) != 0 || tableName.compare(string(TABLES_TABLE_NAME)) != 0) {
 		if ((rbfm->createFile(tableName))) {
 			cerr << "Couldnt create file." << endl;
 			return 1;
