@@ -148,7 +148,7 @@ public:
 
 
   RC insertRecordExistingPage(FileHandle &fileHandle, int pageNum, void* pageToProcess, const void *data, int recordSize, RID &rid);
-  RC insertRecordNewPage(FileHandle &fileHandle, int pageNum, const void *data, int recordSize, RID &rid);
+  RC insertRecordNewPage(FileHandle &fileHandle, int pageNum, void* pageToProcess, const void *data, int recordSize, RID &rid);
 
   unsigned calculateRecordSize(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data);
   RC verifyFreeSpaceForRecord(FileHandle &fileHandle, int pageNum, void *pageToProcess, int recordSize);

@@ -58,6 +58,7 @@ RC RecordBasedFileManager::closeFile(FileHandle &fileHandle) {
     return success;
 }
 
+//----------------------------Record related helper-------------------------------------------------------------------
 
 RecordDic getRecordFieldOffset(const void *recordToProcess, unsigned fieldNum)
 {
@@ -81,6 +82,12 @@ RecordDic getRecordFieldSize(const void *recordToProcess, unsigned fieldNum)
 		return -1;
 	}
 
+}
+
+RecordDic getNumOfRecord(const void *recordToProcess)
+{
+	char *interiorRecordDicSlot = (char*)recordToProcess + 1*sizeof(RecordDic); //Tomb
+	return *((RecordDic*)interiorRecordDicSlot);
 }
 
 
@@ -112,6 +119,8 @@ RC setTombstone(void *recordToProcess, RecordDic type)
 	return 0;
 }
 
+
+//------------------------Page related helper--------------------------------------------------
 
 
 RC setRecordOffset(void *pageToProcess,unsigned slot, PageDic offset)
@@ -400,7 +409,7 @@ RC RecordBasedFileManager::transToInteriorRecord(const vector<Attribute> &record
 unsigned RecordBasedFileManager::calculateRecordSize(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data)
 {
 
-	unsigned numberOfFields = recordDescriptor.size();
+	unsigned numberOfFields = getNumOfRecord(data);
 	//char *interiorRecordDicSlot = (char*)data + 1*sizeof(RecordDic);
 	unsigned recordSize = sizeof(RecordDic)*(1 + 1 + numberOfFields + 1);//Tombstone,numOfRec,Slots,last slot
 
@@ -490,9 +499,9 @@ RC RecordBasedFileManager::verifyFreeSpaceForRecord(FileHandle &fileHandle, int 
     return 0;
 }
 
-RC RecordBasedFileManager::insertRecordNewPage(FileHandle &fileHandle, int pageNum, const void *data, int recordSize, RID &rid)
+RC RecordBasedFileManager::insertRecordNewPage(FileHandle &fileHandle, int pageNum, void* pageToProcess, const void *data, int recordSize, RID &rid)
 {
-	void *pageToProcess = tempPage; //Create a new page
+
 
 	memcpy(pageToProcess,data,recordSize);//Write record
 
@@ -520,6 +529,7 @@ RC RecordBasedFileManager::insertRecordNewPage(FileHandle &fileHandle, int pageN
 RC RecordBasedFileManager::insertRecordExistingPage(FileHandle &fileHandle, int pageNum, void* pageToProcess, const void *data, int recordSize, RID &rid)
 {
     int numOfRecordSlots = getNumOfRecordSlots(pageToProcess);//(int)*((PageDic*)numOfRecordsPtr);
+
 
 	//Free space related variable
 	int freeSpaceOffset = getFreeSpaceOffset(pageToProcess);//(int)*((PageDic*)freeSpaceOffsetPtr);
@@ -558,6 +568,13 @@ RC RecordBasedFileManager::insertRecordExistingPage(FileHandle &fileHandle, int 
 
 RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid) {
 
+	void *pageToProcess = NULL;//malloc(PAGE_SIZE);
+
+	if(indirectRef == false)
+		pageToProcess = (char*)tempPage;
+	else
+		pageToProcess = (char*)tempPage1;
+
 	//Calculate record Size
 	RC rc = -1;
 	int recordSize = getSizeOfInteriorRecord(recordDescriptor, data);//calculateRecordSize(fileHandle,recordDescriptor,data);
@@ -567,7 +584,6 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 		//A page is smaller than record(beyond the scope - stop) and not 0
 		return -1;
 	}
-
 
 	void *interiorRecord = tempRecord; //malloc(recordSize);
     rc = transToInteriorRecord(recordDescriptor,data,interiorRecord);
@@ -583,7 +599,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 
 	if(numOfPages == 0)
 	{
-		RC success = insertRecordNewPage(fileHandle,numOfPages, interiorRecord,recordSize,rid);
+		RC success = insertRecordNewPage(fileHandle,numOfPages,pageToProcess, interiorRecord,recordSize,rid);
 		//free(interiorRecord);
 		return success;
 	}
@@ -591,7 +607,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 
 	int lastPageNum = numOfPages - 1; //First candidate: Last page
 
-	void *pageToProcess = tempPage;//malloc(PAGE_SIZE);
+
 	rc = verifyFreeSpaceForRecord(fileHandle, lastPageNum, pageToProcess, recordSize); //verify the last page
 
 	if(rc == 0)//Free space in the last page
@@ -619,7 +635,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 
 
 	//Make new page and insert
-	rc = insertRecordNewPage(fileHandle,numOfPages, interiorRecord,recordSize,rid);
+	rc = insertRecordNewPage(fileHandle,numOfPages,pageToProcess, interiorRecord,recordSize,rid);
 
 
 	return rc;
@@ -933,12 +949,26 @@ RC RecordBasedFileManager::indirectUpdateRecord(FileHandle &fileHandle, const ve
 	if(existingRecordSize == newRecordSize)
 	{
 		//Overwrite
+		void *interiorRecord = tempRecord; //malloc(recordSize);
+	    rc = transToInteriorRecord(recordDescriptor,data,interiorRecord);
+	    if(rc == -1)
+	    {
+	    	//free(interiorRecord);
+	    	return rc;
+	    }
 		memcpy(existingRecord,data,newRecordSize);
 
 	}
 	else if(existingRecordSize > newRecordSize)
 	{
 		//Overwrite
+		void *interiorRecord = tempRecord; //malloc(recordSize);
+	    rc = transToInteriorRecord(recordDescriptor,data,interiorRecord);
+	    if(rc == -1)
+	    {
+	    	//free(interiorRecord);
+	    	return rc;
+	    }
 		memcpy(existingRecord,data,newRecordSize);
 		//Compact
 		rc = compactRecords(pageToProcess,existingRecordOffset+existingRecordSize,existingRecordOffset + newRecordSize);
@@ -958,6 +988,13 @@ RC RecordBasedFileManager::indirectUpdateRecord(FileHandle &fileHandle, const ve
 			{
 				return rc;
 			}
+			void *interiorRecord = tempRecord; //malloc(recordSize);
+		    rc = transToInteriorRecord(recordDescriptor,data,interiorRecord);
+		    if(rc == -1)
+		    {
+		    	//free(interiorRecord);
+		    	return rc;
+		    }
 			memcpy(existingRecord,data,newRecordSize);
 		}
 		else
@@ -1029,7 +1066,15 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 				{
 					return rc;
 				}
-				memcpy(existingRecord,data,newRecordSize);
+
+				void *interiorRecord = tempRecord; //malloc(recordSize);
+			    rc = transToInteriorRecord(recordDescriptor,data,interiorRecord);
+			    if(rc == -1)
+			    {
+			    	//free(interiorRecord);
+			    	return rc;
+			    }
+				memcpy(existingRecord,interiorRecord,newRecordSize);
 			}
 			//another page to migrate
 			else
@@ -1061,13 +1106,27 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 	    if(existingRecordSize == newRecordSize)
     	{
 	    	//Overwrite
-    		memcpy(existingRecord,data,newRecordSize);
+			void *interiorRecord = tempRecord; //malloc(recordSize);
+		    rc = transToInteriorRecord(recordDescriptor,data,interiorRecord);
+		    if(rc == -1)
+		    {
+		    	//free(interiorRecord);
+		    	return rc;
+		    }
+    		memcpy(existingRecord,interiorRecord,newRecordSize);
 
     	}
     	else if(existingRecordSize > newRecordSize)
 	    {
 	    	//Overwrite
-	    	memcpy(existingRecord,data,newRecordSize);
+			void *interiorRecord = tempRecord; //malloc(recordSize);
+		    rc = transToInteriorRecord(recordDescriptor,data,interiorRecord);
+		    if(rc == -1)
+		    {
+		    	//free(interiorRecord);
+		    	return rc;
+		    }
+	    	memcpy(existingRecord,interiorRecord,newRecordSize);
 	    	//Compact
 	    	rc = compactRecords(pageToProcess,existingRecordOffset+existingRecordSize,existingRecordOffset + newRecordSize);
     		if(rc == -1)
@@ -1086,7 +1145,14 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 	    		{
 		    		return rc;
 		    	}
-	    		memcpy(existingRecord,data,newRecordSize);
+				void *interiorRecord = tempRecord; //malloc(recordSize);
+			    rc = transToInteriorRecord(recordDescriptor,data,interiorRecord);
+			    if(rc == -1)
+			    {
+			    	//free(interiorRecord);
+			    	return rc;
+			    }
+	    		memcpy(existingRecord,interiorRecord,newRecordSize);
 	    	}
 	    	else
 	    	{

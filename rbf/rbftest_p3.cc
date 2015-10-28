@@ -59,7 +59,7 @@ int RBFTest_private_3(RecordBasedFileManager *rbfm) {
 	void *record2 = malloc(1000);
 	void *returnedData = malloc(1000);
 	void *returnedData2 = malloc(1000);
-	int numRecords = 50000;
+	int numRecords = 20000;
 
 	vector<Attribute> recordDescriptorForTwitterUser,
 			recordDescriptorForTweetMessage;
@@ -97,11 +97,14 @@ int RBFTest_private_3(RecordBasedFileManager *rbfm) {
 
 		prepareLargeRecordForTweetMessage(recordDescriptorForTweetMessage.size(), nullsIndicator2, i, record2, &size2);
 
+
 		rc = rbfm->insertRecord(fileHandle2, recordDescriptorForTweetMessage,
 				record2, rid2);
 	    assert(rc == success && "Inserting a record  for the file #2 should not fail.");
 
 		rids2.push_back(rid2);
+
+
 
 		if (i%5000 == 0 && i != 0) {
 			cout << i << " / " << numRecords << " records inserted so far for both files." << endl;
