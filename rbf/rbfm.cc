@@ -1265,8 +1265,11 @@ RC RecordBasedFileManager::scan(FileHandle &fileHandle,
 	{
 		//Condition Attribute
 		if(recordDescriptor[i].name.compare(conditionAttribute) == 0)
+		{
 		    rbfm_ScanIterator.conditionAttrFieldNum = i;
 		    rbfm_ScanIterator.conditionAttrFieldType = recordDescriptor[i].type;
+		    break;
+		}
 
     }
 
@@ -1286,7 +1289,7 @@ RC RecordBasedFileManager::scan(FileHandle &fileHandle,
 	}
 
 
-    return -1;
+    return 0;
 }
 
 template <typename T>

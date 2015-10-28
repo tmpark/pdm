@@ -59,6 +59,8 @@ public:
   // The format is the same as printRecord().
   RC printTuple(const vector<Attribute> &attrs, const void *data);
 
+  RC getSystemAttributes(const string &tableName, vector<Attribute> &attrs);
+
   RC readAttribute(const string &tableName, const RID &rid, const string &attributeName, void *data);
 
   // Scan returns an iterator to allow the caller to go through the results one by one.
