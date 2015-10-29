@@ -503,6 +503,7 @@ RC RecordBasedFileManager::insertRecordNewPage(FileHandle &fileHandle, int pageN
 {
 
 
+
 	memcpy(pageToProcess,data,recordSize);//Write record
 
 	//update
@@ -707,7 +708,7 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 	{
 		RID indirectRid;
 		indirectRid.pageNum = getTombstone(recordToRead);
-		indirectRid.slotNum = getTombstone(recordToRead+1);
+		indirectRid.slotNum = getTombstone(recordToRead+sizeof(RecordDic));
 		indirectRef = true;
 		rc = readRecord(fileHandle, recordDescriptor, indirectRid, data);
 		indirectRef = false;
@@ -851,7 +852,7 @@ RC RecordBasedFileManager::pushRecords(char *pageToProcess, PageDic from, PageDi
 	for(int i = 0 ; i < getNumOfRecordSlots(pageToProcess) ; i++)
 	{
 		PageDic targetRecordOffset = getRecordOffset(pageToProcess,i);
-		if(from < targetRecordOffset)
+		if(from <= targetRecordOffset)
 			setRecordOffset(pageToProcess,i,targetRecordOffset + difference); //other record that moved
 	}
 
@@ -890,7 +891,7 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 	{
 		RID indirectRid;
 		indirectRid.pageNum = getTombstone(recordToProcess);
-		indirectRid.slotNum = getTombstone(recordToProcess+1);
+		indirectRid.slotNum = getTombstone(recordToProcess+sizeof(RecordDic));
 		indirectRef = true;
 		rc = deleteRecord(fileHandle, recordDescriptor, indirectRid);
 		indirectRef = false;
@@ -1040,7 +1041,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 	{
 		RID indirectRid;
 		indirectRid.pageNum = getTombstone(existingRecord);
-		indirectRid.slotNum = getTombstone(existingRecord+1);
+		indirectRid.slotNum = getTombstone(existingRecord+sizeof(RecordDic));
 		indirectRef = true;
 		rc = indirectUpdateRecord(fileHandle, recordDescriptor, data, indirectRid);
 		indirectRef = false;
@@ -1191,6 +1192,9 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 				memcpy(existingRecord+sizeof(RecordDic),fowardedSlotNumPtr,sizeof(RecordDic));
 				//compact
 				compactRecords(pageToProcess,existingRecordOffset+existingRecordSize,existingRecordOffset + sizeOfTombstone);
+
+				//cout << getTombstone(existingRecord) << endl << flush;
+				//cout << getTombstone(existingRecord+sizeof(RecordDic)) << endl << flush;
 			}
 
 		}
@@ -1227,7 +1231,7 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
 	{
 		RID indirectRid;
 		indirectRid.pageNum = getTombstone(recordToProcess);
-		indirectRid.slotNum = getTombstone(recordToProcess+1);
+		indirectRid.slotNum = getTombstone(recordToProcess+sizeof(RecordDic));
 		indirectRef = true;
 		rc = readAttribute(fileHandle, recordDescriptor, indirectRid, attributeName, data);
 		indirectRef = false;
@@ -1456,6 +1460,7 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 
 					if (conditionAttrFieldType == TypeInt)
 					{
+						//cout << *((int*)recordFieldPtr) << endl << *((int*)value)<<flush;
 						if(compareValues(*((int*)recordFieldPtr), *((int*)value),compOp) == true)
 							match = true;
 
@@ -1494,7 +1499,7 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 			{
 				RID indirectRid;
 				indirectRid.pageNum = getTombstone(recordToRead);
-				indirectRid.slotNum = getTombstone(recordToRead + 1);
+				indirectRid.slotNum = getTombstone(recordToRead + sizeof(RecordDic));
 
 				char *indirectPage = (char*)tempPage1;
 				rc = fileHandle->readPage(indirectRid.pageNum,indirectPage);//Read Page

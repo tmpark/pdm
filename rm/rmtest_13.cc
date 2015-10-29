@@ -20,6 +20,13 @@ RC TEST_RM_13(const string &tableName)
     // GetAttributes
     vector<Attribute> attrs;
     RC rc = rm->getAttributes(tableName, attrs);
+
+    for(unsigned int i = 0 ; i < attrs.size() ; i++)
+    {
+    	cout <<attrs[i].name <<endl << flush;
+    }
+
+
     assert(rc == success && "RelationManager::getAttributes() should not fail.");
 
     int nullAttributesIndicatorActualSize = getActualByteForNullsIndicator(attrs.size());

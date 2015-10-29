@@ -9,7 +9,7 @@
 
 
 RelationManager* RelationManager::_rm = 0;
-int RelationManager:: tableID = 1;
+
 
 RelationManager* RelationManager::instance()
 {
@@ -23,10 +23,35 @@ RelationManager::RelationManager()
 {
 	admin = false;
 	comingFromCreateTable = false;
+	nextTableID = 0;
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 
-	rbfm->openFile(string(TABLES_TABLE_NAME),tabFileHandle);
+	RC rc = rbfm->openFile(string(TABLES_TABLE_NAME),tabFileHandle);
 	rbfm->openFile(string(COLUMNS_TABLE_NAME),colFileHandle);
+	if(rc == 0)
+	{
+		RM_ScanIterator rmsiTable;
+		vector<string> attributes;
+		string attr = "";
+		string returnattr = "table-id";
+		attributes.push_back(returnattr);
+		RID rid;
+		char tableIDArr[5];
+		char *tableIDPtr = tableIDArr;
+
+		if(scan(string(TABLES_TABLE_NAME), attr, NO_OP, NULL, attributes, rmsiTable) != 0)
+		{
+			cerr << "Error occured while scanning!" << endl;
+		}
+		while(rmsiTable.getNextTuple(rid,tableIDPtr) != RM_EOF)
+		{
+
+		}
+		tableIDPtr++;
+		nextTableID = *((int*)tableIDPtr);
+		nextTableID++;
+
+	}
 
 }
 
@@ -84,10 +109,7 @@ RC RelationManager::createCatalog()
 	Attribute attr;
 	vector<Attribute> attrs;
 
-	attr.name = "flag";
-	attr.type = TypeVarChar;
-	attr.length = 1;
-	attrs.push_back(attr);
+
 /*
 	attr.name = "version";
 	attr.type = TypeInt;
@@ -109,7 +131,10 @@ RC RelationManager::createCatalog()
 	attr.length = 50;
 	attrs.push_back(attr);
 
-
+	attr.name = "flag";
+	attr.type = TypeVarChar;
+	attr.length = 1;
+	attrs.push_back(attr);
 
 	//Write table info here.
 	createTable(string(TABLES_TABLE_NAME), attrs);
@@ -209,23 +234,16 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 	char *buffer1 = (char *) malloc(5*50);
 	char *buffer = buffer1;
 
-	memset(buffer,0,1);
+	memset(buffer,0,1);//Null vector
 	buffer += 1;
 
-	int length = 1;
-	memcpy(buffer, &length, 4);
-	buffer += 4;
 
-	char flag = 'U';   //means user
-	flag = admin ? 'S' : 'U';
-	memcpy(buffer, &flag, 1);
-	buffer += 1;
 /*
 	int version = 0;   //first version
 	memcpy(buffer, &version, 4);
 	buffer += 4;
 */
-	memcpy(buffer,&tableID,4);
+	memcpy(buffer,&nextTableID,4);
 	buffer += 4;
 
 	int nameSize = tableName.length();
@@ -240,6 +258,15 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 	buffer += 4;
 	memcpy(buffer, tableName.c_str(), nameSize);
 	buffer += nameSize;
+
+	int length = 1;
+	memcpy(buffer, &length, 4); //flag len
+	buffer += 4;
+
+	char flag = 'U';   //flag
+	flag = admin ? 'S' : 'U';
+	memcpy(buffer, &flag, 1);
+	buffer += 1;
 
 
 	/*****END OF PREPARING BUFFER******/
@@ -275,7 +302,7 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
         buffer += 4;*/
 
 		//tableid
-		memcpy(buffer,&tableID,4);
+		memcpy(buffer,&nextTableID,4);
 		buffer += 4;
 
 		Attribute attr = attrs[i];
@@ -356,7 +383,7 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 	}
 
 
-	tableID++;
+	nextTableID++;
 	free(buffer1);
 
 
@@ -397,7 +424,15 @@ RC RelationManager::deleteTable(const string &tableName)
 		return 2;
 	}
 
+	int* TableIDPtr = (int *) (((char *) returnedData) + 1);
 	rmsiTable.close();
+
+	//User access cut
+	if(admin == false && (*TableIDPtr == 0 || *TableIDPtr == 1))
+	{
+		return -1;
+	}
+
 
 	deleteTuple(string(TABLES_TABLE_NAME), rid);
 
@@ -405,10 +440,12 @@ RC RelationManager::deleteTable(const string &tableName)
 	RM_ScanIterator rmsiColumn;
 	attr = "table-id";
 	returnattr = "column-name";
-	int* TableIDPtr = (int *) (((char *) returnedData) + 1);
 	attributes.clear();
 	attributes.push_back(returnattr);
 	char rData[50];
+
+
+
 
 	if(scan(string(COLUMNS_TABLE_NAME), attr, EQ_OP, TableIDPtr, attributes, rmsiColumn) != 0)
 	{
@@ -462,13 +499,13 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 
 	if(rmsiTable.getNextTuple(ridt, returnedData) == RM_EOF)
 	{
-		cerr << "Error occured while getting next tuple!" << endl;
+		//cerr << "Error occured while getting next tuple!" << endl;
 		return 2;
 	}
 
 
-	char * tableNameID = (char *) returnedData;
-	tableNameID++;
+	char * tableNameID = (char *) returnedData; //nullindi + table ID
+	tableNameID++;//next to null indicator
 
 	//RID rid;
 	RM_ScanIterator rmsiColumn;
@@ -528,11 +565,16 @@ RC RelationManager::insertTuple(const string &tableName, const void *data, RID &
 	at.length = 4;
 	attrVector.push_back(at);
 */
+
+
 	//if(tableName.compare(string(TABLES_TABLE_NAME)) == 0 || tableName.compare(string(COLUMNS_TABLE_NAME)) == 0)
 	//{
 	rc = getSystemAttributes(tableName, attrVector);
 	if(rc != 0)
 		return -1;//get attribute info failed
+
+
+
 	//}
 	/*
 	else
@@ -972,10 +1014,7 @@ RC RelationManager::getSystemAttributes(const string &tableName, vector<Attribut
 	RC rc = -1;
 	if(tableName.compare(string(TABLES_TABLE_NAME)) == 0)
 	{
-		attr.name = "flag";
-		attr.type = TypeVarChar;
-		attr.length = 1;
-		attrs.push_back(attr);
+
 /*
 		attr.name = "version";
 		attr.type = TypeInt;
@@ -996,6 +1035,12 @@ RC RelationManager::getSystemAttributes(const string &tableName, vector<Attribut
 		attr.type = TypeVarChar;
 		attr.length = 50;
 		attrs.push_back(attr);
+
+		attr.name = "flag";
+		attr.type = TypeVarChar;
+		attr.length = 1;
+		attrs.push_back(attr);
+
 		rc = 0;
 	}
 	else if(tableName.compare(string(COLUMNS_TABLE_NAME)) == 0)
@@ -1043,6 +1088,9 @@ RC RelationManager::getSystemAttributes(const string &tableName, vector<Attribut
 	{
 		rc = getAttributes(tableName, attrs);
 	}
+
+
+
 	return rc;
 }
 

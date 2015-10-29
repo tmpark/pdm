@@ -84,7 +84,7 @@ protected:
 
 private:
   static RelationManager *_rm;
-    static int tableID;
+    int nextTableID;
     bool admin;
     bool comingFromCreateTable;
     FileHandle tabFileHandle;
