@@ -88,6 +88,7 @@ class IndexManager {
         RC setKeyOfIntermediateEntry(void* entryToProcess, AttrType type, T value);
         template <typename T>
         T getKeyOfEntry(const void* entryToProcess, AttrType type);
+        RC extractVarChar(const void* data);
 
     protected:
         IndexManager();
@@ -95,8 +96,8 @@ class IndexManager {
 
     private:
         static IndexManager *_index_manager;
-        char temp0[PAGE_SIZE];
-        char temp1[PAGE_SIZE];
+        char tempPage0[PAGE_SIZE];
+        char tempPage1[PAGE_SIZE];
 };
 
 

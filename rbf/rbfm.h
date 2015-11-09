@@ -77,6 +77,9 @@ public:
   RBFM_ScanIterator();
   ~RBFM_ScanIterator();
 
+  template <typename T>
+  int compareValues(T const valueExtracted, T const valueCompared, int compOp);
+  RC projectData(vector<ExtractedAttr> &extractedDataDescriptor, char *recordToRead, void *data);
   // Never keep the results in the memory. When getNextRecord() is called, 
   // a satisfying record needs to be fetched from the file.
   // "data" follows the same format as RecordBasedFileManager::insertRecord().
@@ -145,6 +148,23 @@ public:
 
   //-----------------custom functions--------------------------------------------------------------------------
 
+  RecordDic getRecordFieldOffset(const void *recordToProcess, unsigned fieldNum);
+  RecordDic getRecordFieldSize(const void *recordToProcess, unsigned fieldNum);
+  RecordDic getNumOfRecord(const void *recordToProcess);
+  RecordDic getTombstone(void *recordToProcess);
+  RC setRecordFieldOffset(void *recordToProcess, unsigned fieldNum, RecordDic offset);
+  RC setNumOfRecord(void *recordToProcess, RecordDic numOfRecordFields);
+  RC setTombstone(void *recordToProcess, RecordDic type);
+  RC setRecordOffset(void *pageToProcess,unsigned slot, PageDic offset);
+  RC setNumOfRecordSlots(void *pageToProcess, PageDic numOfRecordSlots);
+  RC setFreeSpaceOffset(void *pageToProcess, PageDic offset);
+  PageDic getRecordOffset(void *pageToProcess,unsigned slot);
+  PageDic getNumOfRecordSlots(void *pageToProcess);
+  PageDic getFreeSpaceOffset(void *pageToProcess);
+  unsigned getFreeSpaceSize(void *pageToProcess);
+
+
+
 
 
   RC insertRecordExistingPage(FileHandle &fileHandle, int pageNum, void* pageToProcess, const void *data, int recordSize, RID &rid);
@@ -175,9 +195,9 @@ IMPORTANT, PLEASE READ: All methods below this comment (other than the construct
   RC readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string &attributeName, void *data);
 
   bool indirectRef;
-  void *tempPage;
-  void *tempPage1;
-  void *tempRecord;
+  char tempPage[PAGE_SIZE];
+  char tempPage1[PAGE_SIZE];
+  char tempRecord[PAGE_SIZE];
 
   // Scan returns an iterator to allow the caller to go through the results one by one. 
   RC scan(FileHandle &fileHandle,

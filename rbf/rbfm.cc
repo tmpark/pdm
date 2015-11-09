@@ -7,6 +7,7 @@
 #include <cstdio> //added library
 
 
+
 RecordBasedFileManager* RecordBasedFileManager::_rbf_manager = 0;
 
 RecordBasedFileManager* RecordBasedFileManager::instance()
@@ -21,16 +22,12 @@ RecordBasedFileManager* RecordBasedFileManager::instance()
 RecordBasedFileManager::RecordBasedFileManager()
 {
 	indirectRef = false;
-	tempPage = malloc(PAGE_SIZE);
-	tempPage1 = malloc(PAGE_SIZE);
-	tempRecord = malloc(PAGE_SIZE);
+
 }
 
 RecordBasedFileManager::~RecordBasedFileManager()
 {
-	free(tempPage);
-	free(tempPage1);
-	free(tempRecord);
+
 }
 
 RC RecordBasedFileManager::createFile(const string &fileName) {
@@ -60,14 +57,14 @@ RC RecordBasedFileManager::closeFile(FileHandle &fileHandle) {
 
 //----------------------------Record related helper-------------------------------------------------------------------
 
-RecordDic getRecordFieldOffset(const void *recordToProcess, unsigned fieldNum)
+RecordDic RecordBasedFileManager::getRecordFieldOffset(const void *recordToProcess, unsigned fieldNum)
 {
 	char *interiorRecordDicSlot = (char*)recordToProcess + (1+1)*sizeof(RecordDic); //Tomb + NumOfRecs
 	char *DicSlotPtr = interiorRecordDicSlot + fieldNum*sizeof(RecordDic);
 	return *((RecordDic*)DicSlotPtr);
 }
 
-RecordDic getRecordFieldSize(const void *recordToProcess, unsigned fieldNum)
+RecordDic RecordBasedFileManager::getRecordFieldSize(const void *recordToProcess, unsigned fieldNum)
 {
 	RecordDic currentFieldOffset = getRecordFieldOffset(recordToProcess,fieldNum);//*((RecordDic*)currentDicSlotPtr);
 	RecordDic nextFieldOffset = getRecordFieldOffset(recordToProcess,fieldNum+1);//*((RecordDic*)nextDicSlotPtr);
@@ -84,20 +81,20 @@ RecordDic getRecordFieldSize(const void *recordToProcess, unsigned fieldNum)
 
 }
 
-RecordDic getNumOfRecord(const void *recordToProcess)
+RecordDic RecordBasedFileManager::getNumOfRecord(const void *recordToProcess)
 {
 	char *interiorRecordDicSlot = (char*)recordToProcess + 1*sizeof(RecordDic); //Tomb
 	return *((RecordDic*)interiorRecordDicSlot);
 }
 
 
-RecordDic getTombstone(void *recordToProcess)
+RecordDic RecordBasedFileManager::getTombstone(void *recordToProcess)
 {
 	char *interiorRecordDicSlot = (char*)recordToProcess;
 	return *((RecordDic*)interiorRecordDicSlot);
 }
 
-RC setRecordFieldOffset(void *recordToProcess, unsigned fieldNum, RecordDic offset)
+RC RecordBasedFileManager::setRecordFieldOffset(void *recordToProcess, unsigned fieldNum, RecordDic offset)
 {
 	char *interiorRecordDicSlot = (char*)recordToProcess + (1+1)*sizeof(RecordDic); //Tomb +NumOfRecs
 	char *DicSlotPtr = interiorRecordDicSlot + fieldNum*sizeof(RecordDic);
@@ -105,14 +102,14 @@ RC setRecordFieldOffset(void *recordToProcess, unsigned fieldNum, RecordDic offs
 	return 0;
 }
 
-RC setNumOfRecord(void *recordToProcess, RecordDic numOfRecordFields)
+RC RecordBasedFileManager::setNumOfRecord(void *recordToProcess, RecordDic numOfRecordFields)
 {
 	char *interiorRecordDicSlot = (char*)recordToProcess + 1*sizeof(RecordDic); //Tomb
 	*((RecordDic*)interiorRecordDicSlot) = numOfRecordFields;
 	return 0;
 }
 
-RC setTombstone(void *recordToProcess, RecordDic type)
+RC RecordBasedFileManager::setTombstone(void *recordToProcess, RecordDic type)
 {
 	char *interiorRecordDicSlot = (char*)recordToProcess;
 	*((RecordDic*)interiorRecordDicSlot) = type;
@@ -123,7 +120,7 @@ RC setTombstone(void *recordToProcess, RecordDic type)
 //------------------------Page related helper--------------------------------------------------
 
 
-RC setRecordOffset(void *pageToProcess,unsigned slot, PageDic offset)
+RC RecordBasedFileManager::setRecordOffset(void *pageToProcess,unsigned slot, PageDic offset)
 {
 	PageDic recordDicOffset = PAGE_SIZE - sizeof(PageDic)*(3+slot);
 	char *recordDic = (char*)pageToProcess + recordDicOffset;
@@ -132,14 +129,14 @@ RC setRecordOffset(void *pageToProcess,unsigned slot, PageDic offset)
 	return 0;
 }
 
-RC setNumOfRecordSlots(void *pageToProcess, PageDic numOfRecordSlots)
+RC RecordBasedFileManager::setNumOfRecordSlots(void *pageToProcess, PageDic numOfRecordSlots)
 {
 	PageDic recordDicOffset = PAGE_SIZE - sizeof(PageDic)*2;
 	char *recordDic = (char*)pageToProcess + recordDicOffset;
 	*((PageDic*)recordDic) = numOfRecordSlots; //record increase
 	return 0;
 }
-RC setFreeSpaceOffset(void *pageToProcess, PageDic offset)
+RC RecordBasedFileManager::setFreeSpaceOffset(void *pageToProcess, PageDic offset)
 {
 	PageDic recordDicOffset = PAGE_SIZE - sizeof(PageDic);
 	char *recordDic = (char*)pageToProcess + recordDicOffset;
@@ -147,27 +144,27 @@ RC setFreeSpaceOffset(void *pageToProcess, PageDic offset)
 	return 0;
 }
 
-PageDic getRecordOffset(void *pageToProcess,unsigned slot)
+PageDic RecordBasedFileManager::getRecordOffset(void *pageToProcess,unsigned slot)
 {
 	PageDic recordDicOffset = PAGE_SIZE - sizeof(PageDic)*(3+slot);
 	char *recordDic = (char*)pageToProcess + recordDicOffset;
 	return *((PageDic*)recordDic);
 }
 
-PageDic getNumOfRecordSlots(void *pageToProcess)
+PageDic RecordBasedFileManager::getNumOfRecordSlots(void *pageToProcess)
 {
 	PageDic recordDicOffset = PAGE_SIZE - sizeof(PageDic)*2;
 	char *recordDic = (char*)pageToProcess + recordDicOffset;
 	return *((PageDic*)recordDic);
 }
-PageDic getFreeSpaceOffset(void *pageToProcess)
+PageDic RecordBasedFileManager::getFreeSpaceOffset(void *pageToProcess)
 {
 	PageDic recordDicOffset = PAGE_SIZE - sizeof(PageDic);
 	char *recordDic = (char*)pageToProcess + recordDicOffset;
 	return *((PageDic*)recordDic);
 }
 
-unsigned getFreeSpaceSize(void *pageToProcess)
+unsigned RecordBasedFileManager::getFreeSpaceSize(void *pageToProcess)
 {
 	int freeSpaceOffset = getFreeSpaceOffset(pageToProcess);//*((PageDic*)freeSpaceOffsetPtr);
 	int numOfRecordSlots = getNumOfRecordSlots(pageToProcess);//(int)*((PageDic*)numOfRecordsPtr);
@@ -1311,7 +1308,7 @@ RC RecordBasedFileManager::scan(FileHandle &fileHandle,
 }
 
 template <typename T>
-int compareValues(T const valueExtracted, T const valueCompared, int compOp)
+int RBFM_ScanIterator::compareValues(T const valueExtracted, T const valueCompared, int compOp)
 {
 	switch(compOp)
 	{
@@ -1345,8 +1342,9 @@ int compareValues(T const valueExtracted, T const valueCompared, int compOp)
 	return -1;
 }
 
-RC projectData(vector<ExtractedAttr> &extractedDataDescriptor, char *recordToRead, void *data)
+RC RBFM_ScanIterator::projectData(vector<ExtractedAttr> &extractedDataDescriptor, char *recordToRead, void *data)
 {
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 	unsigned numberOfFields = extractedDataDescriptor.size();
 	unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
 	unsigned char *nullsIndicator = (unsigned char*)data;
@@ -1360,7 +1358,7 @@ RC projectData(vector<ExtractedAttr> &extractedDataDescriptor, char *recordToRea
 		unsigned positionOfByte = floor((double)i / 8);
 		unsigned positionOfNullIndicator = i % 8;
 
-		int fieldSize = getRecordFieldSize(recordToRead,extractedDataDescriptor[i].fieldNum);
+		int fieldSize = rbfm->getRecordFieldSize(recordToRead,extractedDataDescriptor[i].fieldNum);
 		if(fieldSize != -1)
 		{
 			if(extractedDataDescriptor[i].type == TypeVarChar)
@@ -1371,7 +1369,7 @@ RC projectData(vector<ExtractedAttr> &extractedDataDescriptor, char *recordToRea
 				recordFieldOffset = recordFieldOffset + sizeof(int);
 			}
 
-			memcpy(recordField + recordFieldOffset, (char*)recordToRead + getRecordFieldOffset(recordToRead,extractedDataDescriptor[i].fieldNum), fieldSize);
+			memcpy(recordField + recordFieldOffset, (char*)recordToRead + rbfm->getRecordFieldOffset(recordToRead,extractedDataDescriptor[i].fieldNum), fieldSize);
 			recordFieldOffset = recordFieldOffset + fieldSize;
 		}
 		else//return value -1 means NULL
@@ -1391,6 +1389,7 @@ RC projectData(vector<ExtractedAttr> &extractedDataDescriptor, char *recordToRea
 // "data" follows the same format as RecordBasedFileManager::insertRecord().
 RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 {
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 	RC rc = 0;
 	bool match = false;
 
@@ -1409,14 +1408,14 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 
 			//Record information initialization
 			currentRecordNum = 0;
-			numOfRecords = getNumOfRecordSlots(currentPage);
+			numOfRecords = rbfm->getNumOfRecordSlots(currentPage);
 		}
 
 		//from currentRecord to end of record
 		for (unsigned j = currentRecordNum ; j < numOfRecords ; j++)
 		{
 			//extract record
-			PageDic recordOffset = getRecordOffset(currentPage,j);
+			PageDic recordOffset = rbfm->getRecordOffset(currentPage,j);
 			if(recordOffset == -1)//deleted Page
 			{
 				currentRecordNum++;
@@ -1427,7 +1426,7 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 
 
 			//tombstone check
-			RecordDic tombstone = getTombstone(recordToRead);
+			RecordDic tombstone = rbfm->getTombstone(recordToRead);
 
 			if(tombstone == Direct_Rec)
 			{
@@ -1436,17 +1435,17 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 					match = true;
 				else
 				{
-					unsigned recordFieldOffset = getRecordFieldOffset(recordToRead, conditionAttrFieldNum);
+					unsigned recordFieldOffset = rbfm->getRecordFieldOffset(recordToRead, conditionAttrFieldNum);
 					char *recordFieldPtr = recordToRead + recordFieldOffset;
 
-					unsigned extractedValueSize = getRecordFieldSize(recordToRead, conditionAttrFieldNum);
+					unsigned extractedValueSize = rbfm->getRecordFieldSize(recordToRead, conditionAttrFieldNum);
 
 					/*---------------------------debug-----------------------------*/
 
-					unsigned first = getRecordFieldOffset(recordToRead,0);
-					unsigned second = getRecordFieldOffset(recordToRead,1);
-					unsigned third = getRecordFieldOffset(recordToRead,2);
-					unsigned fourth = getRecordFieldOffset(recordToRead,3);
+					unsigned first = rbfm->getRecordFieldOffset(recordToRead,0);
+					unsigned second = rbfm->getRecordFieldOffset(recordToRead,1);
+					unsigned third = rbfm->getRecordFieldOffset(recordToRead,2);
+					unsigned fourth = rbfm->getRecordFieldOffset(recordToRead,3);
 
 					/*-------------------------------------------------------------*/
 
@@ -1498,8 +1497,8 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 			else
 			{
 				RID indirectRid;
-				indirectRid.pageNum = getTombstone(recordToRead);
-				indirectRid.slotNum = getTombstone(recordToRead + sizeof(RecordDic));
+				indirectRid.pageNum = rbfm->getTombstone(recordToRead);
+				indirectRid.slotNum = rbfm->getTombstone(recordToRead + sizeof(RecordDic));
 
 				char *indirectPage = (char*)tempPage1;
 				rc = fileHandle->readPage(indirectRid.pageNum,indirectPage);//Read Page
@@ -1508,7 +1507,7 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 					return rc;
 				}
 				//extract record
-				PageDic indirectRecordOffset = getRecordOffset(indirectPage,indirectRid.slotNum);
+				PageDic indirectRecordOffset = rbfm->getRecordOffset(indirectPage,indirectRid.slotNum);
 				char *indirectRecordToRead = (char*)indirectPage + indirectRecordOffset;
 
 				if(compOp == NO_OP)
@@ -1517,10 +1516,10 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 
 					//same as direct
 
-					unsigned indirectRecordFieldOffset = getRecordFieldOffset(indirectRecordToRead, conditionAttrFieldNum);
+					unsigned indirectRecordFieldOffset = rbfm->getRecordFieldOffset(indirectRecordToRead, conditionAttrFieldNum);
 					char *indirectRecordFieldPtr = indirectRecordToRead + indirectRecordFieldOffset;
 
-					unsigned extractedValueSize = getRecordFieldSize(indirectRecordToRead, conditionAttrFieldNum);
+					unsigned extractedValueSize = rbfm->getRecordFieldSize(indirectRecordToRead, conditionAttrFieldNum);
 					if(extractedValueSize == -1) // Null
 					{
 						currentRecordNum++;
@@ -1685,3 +1684,4 @@ RBFM_ScanIterator :: ~RBFM_ScanIterator()
 
  */
 /****************************debug*/
+

@@ -316,7 +316,12 @@ RC IndexManager::setEntryInLeaf(const void* entryToProcess, AttrType keyType, un
 	return 0;
 }
 
-
+RC IndexManager::extractVarChar(const void* data)
+{
+    int sizeOfVarChar = *((int*)data);
+    char *varChar = (char*)data + sizeof(int);
+    return string(varChar,sizeOfVarChar);
+}
 
 
 
@@ -414,6 +419,25 @@ RC IndexManager::closeFile(IXFileHandle &ixfileHandle)
 
 RC IndexManager::insertEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid)
 {
+	RC rc = -1;
+	void *pageToProcess = tempPage0;
+	//RC rc = ixfileHandle.fileHandle.readPage(rid.pageNum,pageToProcess);//Read Page
+	if(rc != 0)
+		return rc;
+
+
+    NodeType nodeType = getNodeType(pageToProcess);
+    if (nodeType == ROOT_NODE || nodeType == INTER_NODE)
+    {
+
+
+    }
+    else if(nodeType == LEAF_NODE)
+    {
+
+
+    }
+
 	//if it is non leaf node
 	//RC = binary search to find location to insert(-1, leftmost child is candidate)
 
