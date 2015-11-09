@@ -81,7 +81,7 @@ class IndexManager {
 
         /*******Entrywide helper functions********/
         template <typename T>
-        T getKeyOfEntry(const void* entryToProcess, AttrType type);
+        RC getKeyOfEntry(const void* entryToProcess, AttrType type, T &value);
         template <typename T>
         RC setKeyOfEntry(void* entryToProcess, AttrType type, T value);
 
@@ -96,12 +96,6 @@ class IndexManager {
 
         RC getEntryInLeaf(const void* entryToProcess, AttrType keyType,unsigned entryNum, RID &rid);
         RC setEntryInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid);
-
-
-
-
-
-
 
 
         unsigned getSizeOfEntryInLeaf(const void* entryToProcess, AttrType keyType);
