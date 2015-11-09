@@ -338,77 +338,28 @@ IndexManager::~IndexManager()
 
 RC IndexManager::createFile(const string &fileName)
 {
-	const char* fileName_char = fileName.c_str();
-	fstream file_to_create;
-	file_to_create.open(fileName_char, fstream::in);
-	if(file_to_create.is_open())
-	{
-		file_to_create.close();
-		return -1; //A file already exists
-	}
 
-	file_to_create.open(fileName_char, fstream::out | fstream:: binary); //Create a file (do not use in when creating a file)
-	if(file_to_create.is_open())
-	{
-		file_to_create.close();
-		return 0;
-	}
-
-	return -1;
+	RC success = PagedFileManager::instance()->createFile(fileName);
+	return success;
 }
 
 RC IndexManager::destroyFile(const string &fileName)
 {
-	const char* fileName_char = fileName.c_str();
-	RC success = remove(fileName_char); //delete file
-	if(success == 0)
-	{
-		return 0; //successful
-	}
-
-	return -1; //A file still exists
+	RC success = PagedFileManager::instance()->destroyFile(fileName);
+		return success;
 }
 
 RC IndexManager::openFile(const string &fileName, IXFileHandle &ixfileHandle)
 {
-	fstream *file_to_open = ixfileHandle.getFileStream();
-	if(file_to_open != NULL) //already opened
-		return -1;
-
-	const char* fileName_char = fileName.c_str();
-	file_to_open = new fstream;
-
-	file_to_open->open(fileName_char, fstream::in | fstream:: out |fstream::binary); //Using both in | out do not allow creation.
-	if(!file_to_open->is_open())
-	{
-
-		return -1; //A file opened
-	}
-
-
-	unsigned current_position = file_to_open->tellg();
-	file_to_open->seekg(0,file_to_open->end); //move to the end of the file
-	unsigned length = file_to_open->tellg(); //position at the end of the file
-	file_to_open->seekg(current_position); //return back to position
-
-
-	ixfileHandle.setFileStream(file_to_open);
-	ixfileHandle.setNumberOfPages(ceil(length / PAGE_SIZE)); //initial number of pages
-
-	return 0;
+	RC success = PagedFileManager::instance()->openFile(fileName,ixfileHandle.fileHandle);
+	return success;
 
 }
 
 RC IndexManager::closeFile(IXFileHandle &ixfileHandle)
 {
-	fstream *file_to_close = ixfileHandle.getFileStream();
-	if(file_to_close->is_open())
-	{
-		file_to_close->close();
-		return 0;
-	}
-
-	return -1;
+	RC success = PagedFileManager::instance()->closeFile(ixfileHandle.fileHandle);
+	return success;
 
 }
 
@@ -473,8 +424,6 @@ IXFileHandle::IXFileHandle()
 	ixReadPageCounter = 0;
 	ixWritePageCounter = 0;
 	ixAppendPageCounter = 0;
-	numberOfPages = 0;
-	file_stream = NULL;
 }
 
 IXFileHandle::~IXFileHandle()
@@ -483,28 +432,7 @@ IXFileHandle::~IXFileHandle()
 
 RC IXFileHandle::collectCounterValues(unsigned &readPageCount, unsigned &writePageCount, unsigned &appendPageCount)
 {
-	return -1;
+	return fileHandle.collectCounterValues(readPageCount,writePageCount, appendPageCount);
 }
 
-void IXFileHandle::setNumberOfPages(unsigned numberToSet)
-{
-	numberOfPages = numberToSet;
-}
-
-unsigned IXFileHandle::getNumberOfPages()
-{
-
-	return numberOfPages;
-}
-
-
-void IXFileHandle::setFileStream(void *file_stream_arg)
-{
-	file_stream = (fstream*)file_stream_arg;
-}
-
-fstream* IXFileHandle::getFileStream()
-{
-	return file_stream;
-}
 

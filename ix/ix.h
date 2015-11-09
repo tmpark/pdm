@@ -57,6 +57,7 @@ class IndexManager {
         // Print the B+ tree in pre-order (in a JSON record format)
         void printBtree(IXFileHandle &ixfileHandle, const Attribute &attribute) const;
 
+        /*********Pagewide helper fucntions*********/
 
         SlotOffset getFreeSpaceOffset(const void* pageToProcess);
         RC setFreeSpaceOffset(void* pageToProcess, SlotOffset freeSpaceOffset);
@@ -76,6 +77,9 @@ class IndexManager {
         RC setRightSiblingPageNum(void* pageToProcess, PageNum rightSiblingPageNum);
         PageNum getLeftMostChildPageNum(const void* pageToProcess);
         RC setLeftMostChildPageNum(void* pageToProcess, PageNum leftChildPageNum);
+
+        /*******Entrywide helper functions********/
+
         RC setEntryInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid);
         RC getEntryInLeaf(const void* entryToProcess, AttrType keyType,unsigned entryNum, RID &rid);
         RC setNumOfRIDsInLeaf(const void* entryToProcess, AttrType keyType, NumOfEnt numOfRids);
@@ -125,6 +129,7 @@ class IXFileHandle {
     unsigned ixReadPageCounter;
     unsigned ixWritePageCounter;
     unsigned ixAppendPageCounter;
+    FileHandle fileHandle;
 
     // Constructor
     IXFileHandle();
@@ -133,14 +138,6 @@ class IXFileHandle {
 
 	// Put the current counter values of associated PF FileHandles into variables
 	RC collectCounterValues(unsigned &readPageCount, unsigned &writePageCount, unsigned &appendPageCount);
-    void setFileStream(void *file_stream_arg);
-    void setNumberOfPages(unsigned numberToSet);
-    fstream* getFileStream();
-    unsigned getNumberOfPages();                                        // Get the number of pages in the file
-
-    private:
-        fstream *file_stream;
-        unsigned numberOfPages;
 
 };
 
