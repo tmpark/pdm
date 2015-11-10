@@ -519,7 +519,14 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 {
 
 	//check whether we will add rid to existing entry or add new entry to node
-	//if we will add rid to existing entry check current size + PageNum + SlotOffset < PAGE_SIZE
+	char* startOfIndex = ((char *)leafNode) + offset;
+	if()
+
+	//if we will add rid to existing entry check current size + PageNum + SlotOffset < total free space in a PAGE
+	//Or simply check numofentries =? 1. HAha it is more smarter way.
+	//Depending on the result: newLeafNode = overflow page or newLeafNode = leaf page
+	//if newLeafNode == leaf page
+	//
 
 	return 0;
 }
