@@ -128,21 +128,16 @@ RC IndexManager::setLeftMostChildPageNum(void* pageToProcess, PageNum leftChildP
 	return 0;
 }
 
-
-SlotOffset IndexManager::getEntryOffset(const void* pageToProcess,unsigned int entryNum)
+unsigned IndexManager::getFreeSpaceSize(void* pageToProcess)
 {
-	SlotOffset containerOffset = PAGE_SIZE - sizeof(SlotOffset) - sizeof(NumOfEnt) - sizeof(PageNum) - sizeof(NodeType) - sizeof(PageNum) - sizeof(PageNum) - sizeof(PageNum) - sizeof(PageNum) - sizeof(SlotOffset)*(1+entryNum);
-	char *containerPtr = (char*)pageToProcess + containerOffset;
-	return *((SlotOffset*)containerPtr);
+	SlotOffset freeSpaceOffset = getFreeSpaceOffset(pageToProcess);
+	return PAGE_SIZE - (PAGE_DIC_SIZE + freeSpaceOffset);
 }
 
-RC IndexManager::setEntryOffset(void* pageToProcess, unsigned int entryNum, SlotOffset entryOffset)
-{
-	SlotOffset containerOffset = PAGE_SIZE - sizeof(SlotOffset) - sizeof(NumOfEnt) - sizeof(PageNum) - sizeof(NodeType) - sizeof(PageNum) - sizeof(PageNum) - sizeof(PageNum) - sizeof(PageNum)- sizeof(SlotOffset)*(1+entryNum);
-	char *containerPtr = (char*)pageToProcess + containerOffset;
-	*((SlotOffset*)containerPtr) = entryOffset; //new free space
-	return 0;
-}
+
+
+
+
 
 template <typename T>
 RC IndexManager::getKeyOfEntry(const void* entryToProcess, T &value)
@@ -281,6 +276,7 @@ RC IndexManager::getEntryInLeaf(const void* entryToProcess, AttrType keyType,uns
 	return 0;
 }
 
+
 RC IndexManager::setEntryInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid)
 {
 	char *ridsPtr = NULL;
@@ -369,6 +365,35 @@ unsigned IndexManager::getSizeOfEntryInIntermediate(const void* entryToProcess, 
 	return entrySize;
 }
 
+bool IndexManager::hasSameKey(const void *key, const void *entryToProcess,  AttrType keyType)
+{
+	if (keyType == TypeInt)
+	{
+		int value1;
+		int value2;
+		getKeyOfEntry(key,value1);
+		getKeyOfEntry(entryToProcess,value2);
+		return (value1 == value2);
+	}
+	else if (keyType == TypeReal)
+	{
+		float value1;
+		float value2;
+		getKeyOfEntry(key,value1);
+		getKeyOfEntry(entryToProcess,value2);
+		return (value1 == value2);
+	}
+	else if (keyType == TypeVarChar)
+	{
+		string value1;
+		string value2;
+		getKeyOfEntry(key,value1);
+		getKeyOfEntry(entryToProcess,value2);
+		return (value1 == value2);
+	}
+    return false;
+}
+
 
 SlotOffset IndexManager::findEntryOffsetToProcess(void *pageToProcess,AttrType attrType, const void *key)
 {
@@ -376,8 +401,7 @@ SlotOffset IndexManager::findEntryOffsetToProcess(void *pageToProcess,AttrType a
 	unsigned numOfEntry = getNumOfEnt(pageToProcess);
 	NodeType nodeType = getNodeType(pageToProcess);
 
-	SlotOffset lastBigestEntryOffset = -1;
-
+	SlotOffset lastBigestEntryOffset = 0;
 	SlotOffset currentEntryOffset = 0;
 
 
@@ -423,7 +447,7 @@ SlotOffset IndexManager::findEntryOffsetToProcess(void *pageToProcess,AttrType a
 
 		if(lastBigestEntryOffset != currentEntryOffset)
 		{
-			break;
+			return lastBigestEntryOffset;
 		}
 
 		//next entry
@@ -433,8 +457,7 @@ SlotOffset IndexManager::findEntryOffsetToProcess(void *pageToProcess,AttrType a
 			currentEntryOffset = currentEntryOffset + getSizeOfEntryInIntermediate(entryToProcess, attrType);
 	}
 
-
-	return lastBigestEntryOffset;
+	return currentEntryOffset;
 }
 
 
@@ -497,6 +520,10 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 		return rc;
 
 	SlotOffset entryOffset = findEntryOffsetToProcess(pageToProcess,attribute.type,key);
+	char *entryToProcess = NULL;
+	if(entryOffset != -1)
+		entryToProcess = pageToProcess + entryToProcess;
+
 
 	NodeType nodeType = getNodeType(pageToProcess);
 
@@ -510,6 +537,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 
 
 	}
+
 }
 
 RC IndexManager::insertEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid)
