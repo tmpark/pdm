@@ -303,7 +303,6 @@ RC IndexManager::setEntryInLeaf(const void* entryToProcess, AttrType keyType, un
 }
 
 
-
 unsigned IndexManager::getSizeOfEntryInLeaf(const void* entryToProcess, AttrType keyType)
 {
 	unsigned entrySize = 0;
@@ -391,7 +390,7 @@ bool IndexManager::hasSameKey(const void *key, const void *entryToProcess,  Attr
 		getKeyOfEntry(entryToProcess,value2);
 		return (value1 == value2);
 	}
-    return false;
+	return false;
 }
 
 
@@ -601,7 +600,7 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 	if(newEntryNeeded)//create new entry and shift entries to new leaf node
 	{
 		char *newEntry = (char *) malloc(200);
-		char *newEntryStartAdd = newEntry;
+		char *newEntryStartAddr = newEntry;
 		int keyLength = *(int *)key;
 		memcpy(newEntry, key, keyLength + 4);//copying key
 		NumOfEnt numOfRIDs = 1;
@@ -611,17 +610,115 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 		memcpy(newEntry, &(rid.pageNum), sizeof(PageNum));
 		newEntry += sizeof(PageNum);
 		memcpy(newEntry, &(rid.slotNum), sizeof(SlotOffset));
+		newEntry += sizeof(SlotOffset);
+		int newEntrySize = newEntry - newEntryStartAddr;
 
-		if(offset < totalFreeSpace/2)
+		int secondPartOffset = 0;
+		int firstPartOffset = 0;
+		int leafNodeOffset = 0;
+		char *firstPart = (char *) malloc(WHOLE_SIZE_FOR_ENTRIES);
+		char *secondPart = (char *) malloc(WHOLE_SIZE_FOR_ENTRIES);
+
+		int entSize = 0;
+		int numOfEntriesF = 0;
+		while(leafNodeOffset < WHOLE_SIZE_FOR_ENTRIES/2)
 		{
-			char * secondPart = (char *) malloc(PAGE_SIZE);
-			memcpy(secondPart, entryToProcess, getFreeSpaceOffset(leafNode) - offset);
-
+			numOfEntriesF++;
+			if(leafNodeOffset == offset)
+			{
+				memcpy(firstPart + firstPartOffset, newEntryStartAddr, newEntrySize);
+				firstPartOffset += newEntrySize;
+				continue;
+			}
+			entSize = getSizeOfEntryInLeaf(leafNode + leafNodeOffset, Attribute.type);
+			memcpy(firstPart + firstPartOffset, leafNode + leafNodeOffset, entSize);
+			firstPartOffset += entSize;
+			leafNodeOffset += entSize;
 		}
+
+		//
+
+		int numOfEntriesS = 0;
+		int freeSpaceOffset = getFreeSpaceOffset(leafNode);
+		while(leafNodeOffset != freeSpaceOffset)
+		{
+			numOfEntriesS++;
+			if(leafNodeOffset == offset)
+			{
+				memcpy(secondPart + secondPartOffset, newEntryStartAddr, newEntrySize);
+				secondPartOffset += newEntrySize;
+				continue;
+			}
+			entSize = getSizeOfEntryInLeaf(leafNode + leafNodeOffset, Attribute.type);
+			memcpy(secondPart + secondPartOffset, leafNode + leafNodeOffset, entSize);
+			secondPartOffset += entSize;
+			leafNodeOffset += entSize;
+		}
+
+		/*if(offset < WHOLE_SIZE_FOR_ENTRIES/2)
+		{
+			char * secondPart = (char *) malloc(WHOLE_SIZE_FOR_ENTRIES);
+			memcpy(secondPart, entryToProcess, getFreeSpaceOffset(leafNode) - offset);
+			memcpy(entryToProcess, newEntryStartAdd, newEntrySize);
+
+			int secondPartOffset = 0;
+			int firstPartOffset = offset + newEntrySize;
+			while((firstPartOffset + getSizeOfEntryInLeaf(secondPart + secondPartOffset, Attribute.type))
+					< WHOLE_SIZE_FOR_ENTRIES/2)
+			{
+				int entSize = getSizeOfEntryInLeaf(secondPart + secondPartOffset, Attribute.type);
+				memcpy(leafNode + firstPartOffset, secondPart + secondPartOffset, entSize);
+				firstPartOffset += entSize;
+				secondPartOffset += entSize;
+			}
+
+			memcpy(newLeafNode, secondPart + secondPartOffset,
+					getFreeSpaceOffset(leafNode) - firstPartOffset);
+		}*/
 	}
 	else//newEntry is not needed but we need a new leaf node and we need to
 		//add rid to ridlist and also shift some entries to new node
 	{
+		int secondPartOffset = 0;
+		int firstPartOffset = 0;
+		int leafNodeOffset = 0;
+		char *firstPart = (char *) malloc(WHOLE_SIZE_FOR_ENTRIES);
+		char *secondPart = (char *) malloc(WHOLE_SIZE_FOR_ENTRIES);
+
+		int entSize = 0;
+		while(leafNodeOffset < WHOLE_SIZE_FOR_ENTRIES/2)
+		{
+			entSize = getSizeOfEntryInLeaf(leafNode + leafNodeOffset, Attribute.type);
+			memcpy(firstPart + firstPartOffset, leafNode + leafNodeOffset, entSize);
+			firstPartOffset += entSize;
+			if(leafNodeOffset == offset)
+			{
+				memcpy(firstPart + firstPartOffset, &(rid.pageNum), sizeof(PageNum));
+				firstPartOffset += sizeof(PageNum);
+				memcpy(firstPart + firstPartOffset, &(rid.slotNum), sizeof(SlotOffset));
+				firstPartOffset += sizeof(SlotOffset);
+				continue;
+			}
+			leafNodeOffset += entSize;
+
+		}
+
+		int freeSpaceOffset = getFreeSpaceOffset(leafNode);
+		while(leafNodeOffset != freeSpaceOffset)
+		{
+			entSize = getSizeOfEntryInLeaf(leafNode + leafNodeOffset, Attribute.type);
+			memcpy(secondPart + secondPartOffset, leafNode + leafNodeOffset, entSize);
+			secondPartOffset += entSize;
+			if(leafNodeOffset == offset)
+			{
+				memcpy(firstPart + secondPartOffset, &(rid.pageNum), sizeof(PageNum));
+				secondPartOffset += sizeof(PageNum);
+				memcpy(firstPart + secondPartOffset, &(rid.slotNum), sizeof(SlotOffset));
+				secondPartOffset += sizeof(SlotOffset);
+				continue;
+			}
+			leafNodeOffset += entSize;
+		}
 
 	}
 	//if we will add rid to existing entry check current size + PageNum + SlotOffset < total free space in a PAGE
