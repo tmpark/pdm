@@ -78,20 +78,33 @@ class IndexManager {
         PageNum getLeftMostChildPageNum(const void* pageToProcess);
         RC setLeftMostChildPageNum(void* pageToProcess, PageNum leftChildPageNum);
 
-        /*******Entrywide helper functions********/
 
-        RC setEntryInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid);
-        RC getEntryInLeaf(const void* entryToProcess, AttrType keyType,unsigned entryNum, RID &rid);
-        RC setNumOfRIDsInLeaf(const void* entryToProcess, AttrType keyType, NumOfEnt numOfRids);
-        NumOfEnt getNumOfRIDsInLeaf(const void* entryToProcess, AttrType keyType);
+        /*******Entrywide helper functions********/
         template <typename T>
-        RC setChildOfIntermediateEntry(void* entryToProcess, AttrType keyType, PageNum childPageNum);
+        RC getKeyOfEntry(const void* entryToProcess, AttrType type, T &value);
+        template <typename T>
+        RC setKeyOfEntry(void* entryToProcess, AttrType type, T value);
+
         template <typename T>
         PageNum getChildOfIntermediateEntry(const void* entryToProcess, AttrType keyType);
         template <typename T>
-        RC setKeyOfIntermediateEntry(void* entryToProcess, AttrType type, T value);
-        template <typename T>
-        T getKeyOfEntry(const void* entryToProcess, AttrType type);
+        RC setChildOfIntermediateEntry(void* entryToProcess, AttrType keyType, PageNum childPageNum);
+
+
+        NumOfEnt getNumOfRIDsInLeaf(const void* entryToProcess, AttrType keyType);
+        RC setNumOfRIDsInLeaf(const void* entryToProcess, AttrType keyType, NumOfEnt numOfRids);
+
+        RC getEntryInLeaf(const void* entryToProcess, AttrType keyType,unsigned entryNum, RID &rid);
+        RC setEntryInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid);
+
+
+        unsigned getSizeOfEntryInLeaf(const void* entryToProcess, AttrType keyType);
+        unsigned getSizeOfEntryInIntermediate(const void* entryToProcess, AttrType keyType);
+
+        SlotOffset findEntryOffsetToProcess(void *pageToProcess,AttrType attrType, const void *key);
+
+
+        string extractVarChar(const void* data);
 
     protected:
         IndexManager();
@@ -99,8 +112,8 @@ class IndexManager {
 
     private:
         static IndexManager *_index_manager;
-        char temp0[PAGE_SIZE];
-        char temp1[PAGE_SIZE];
+        char tempPage0[PAGE_SIZE];
+        char tempPage1[PAGE_SIZE];
 
         RC splitLeaf(void *leafNode, void *newLeafNode, void * newChildEntry,
         		int offset, const Attribute &Attribute, const void *key, const RID &rid);
