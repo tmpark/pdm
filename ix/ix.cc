@@ -584,7 +584,12 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 		newEntry += sizeof(PageNum);
 		memcpy(newEntry, &(rid.slotNum), sizeof(SlotOffset));
 
+		if(offset < totalFreeSpace/2)
+		{
+			char * secondPart = (char *) malloc(PAGE_SIZE);
+			memcpy(secondPart, entryToProcess, getFreeSpaceOffset(leafNode) - offset);
 
+		}
 	}
 	else//newEntry is not needed but we need a new leaf node and we need to
 		//add rid to ridlist and also shift some entries to new node
