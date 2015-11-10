@@ -101,6 +101,9 @@ class IndexManager {
         static IndexManager *_index_manager;
         char temp0[PAGE_SIZE];
         char temp1[PAGE_SIZE];
+
+        RC splitLeaf(void *leafNode, void *newLeafNode, void * newChildEntry,
+        		int offset, const Attribute &Attribute, const void *key, const RID &rid);
 };
 
 

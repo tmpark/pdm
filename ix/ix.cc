@@ -380,6 +380,16 @@ RC IndexManager::insertEntry(IXFileHandle &ixfileHandle, const Attribute &attrib
 	return -1;
 }
 
+RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntry,
+		int offset, const Attribute &Attribute, const void *key, const RID &rid)
+{
+
+	//check whether we will add rid to existing entry or add new entry to node
+	//if we will add rid to existing entry check current size + PageNum + SlotOffset < PAGE_SIZE
+
+	return 0;
+}
+
 RC IndexManager::deleteEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid)
 {
 	return -1;
