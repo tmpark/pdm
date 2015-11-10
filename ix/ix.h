@@ -18,6 +18,10 @@ typedef unsigned short NumOfEnt;
 #define INTER_NODE 'I'
 #define LEAF_NODE 'L'
 
+//freespace, number of entries, tombstone, node type, parent page num, left sibling page num, right sibling page num, left child page num
+#define PAGE_DIC_SIZE (sizeof(SlotOffset) + sizeof(NumOfEnt) + sizeof(PageNum) + sizeof(NodeType) + sizeof(PageNum) + sizeof(PageNum) + sizeof(PageNum) + sizeof(PageNum))
+#define WHOLE_SIZE_FOR_ENTRIES (PAGE_SIZE - PAGE_DIC_SIZE)
+
 
 class IX_ScanIterator;
 class IXFileHandle;
@@ -77,6 +81,7 @@ class IndexManager {
         RC setRightSiblingPageNum(void* pageToProcess, PageNum rightSiblingPageNum);
         PageNum getLeftMostChildPageNum(const void* pageToProcess);
         RC setLeftMostChildPageNum(void* pageToProcess, PageNum leftChildPageNum);
+        unsigned getFreeSpaceSize(void* pageToProcess);
 
 
         /*******Entrywide helper functions********/
@@ -105,6 +110,8 @@ class IndexManager {
         SlotOffset findEntryOffsetToProcess(void *pageToProcess,AttrType attrType, const void *key);
 
         string extractVarChar(const void* data);
+
+        bool hasSameKey(const void *key, const void *entryToProcess,  AttrType keyType);
 
 
         RC _insertEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid);
