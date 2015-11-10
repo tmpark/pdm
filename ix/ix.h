@@ -81,13 +81,14 @@ class IndexManager {
 
         /*******Entrywide helper functions********/
         template <typename T>
-        RC getKeyOfEntry(const void* entryToProcess, AttrType type, T &value);
-        template <typename T>
-        RC setKeyOfEntry(void* entryToProcess, AttrType type, T value);
+        RC getKeyOfEntry(const void* entryToProcess, T &value);
+        RC getKeyOfEntry(const void* entryToProcess, string &value);
 
         template <typename T>
+        RC setKeyOfEntry(void* entryToProcess, T value);
+        RC setKeyOfEntry(void* entryToProcess, string value);
+
         PageNum getChildOfIntermediateEntry(const void* entryToProcess, AttrType keyType);
-        template <typename T>
         RC setChildOfIntermediateEntry(void* entryToProcess, AttrType keyType, PageNum childPageNum);
 
 
@@ -103,8 +104,11 @@ class IndexManager {
 
         SlotOffset findEntryOffsetToProcess(void *pageToProcess,AttrType attrType, const void *key);
 
-
         string extractVarChar(const void* data);
+
+
+        RC _insertEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid);
+
 
     protected:
         IndexManager();
