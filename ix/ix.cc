@@ -559,6 +559,7 @@ RC IndexManager::insertEntry(IXFileHandle &ixfileHandle, const Attribute &attrib
 }
 
 RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntry,
+		PageNum LeafNodePN, PageNum newLeafNodePN,
 		int offset, const Attribute &Attribute, const void *key, const RID &rid)
 {
 
@@ -617,8 +618,9 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 		int secondPartOffset = 0;
 		int firstPartOffset = 0;
 		int leafNodeOffset = 0;
-		char *firstPart = (char *) malloc(WHOLE_SIZE_FOR_ENTRIES);
-		char *secondPart = newLeafNode;
+		char fPart[WHOLE_SIZE_FOR_ENTRIES];
+		char *firstPart = fPart;
+		char *secondPart = (char *) newLeafNode;
 
 		int entSize = 0;
 		int numOfEntriesF = 0;
@@ -637,10 +639,21 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 			leafNodeOffset += entSize;
 		}
 
-		//
-
+		//Create newChildNode
 		int numOfEntriesS = 0;
 		int freeSpaceOffset = getFreeSpaceOffset(leafNode);
+		if(leafNodeOffset != freeSpaceOffset)
+		{
+			string k = extractVarChar(((char *)leafNode) + leafNodeOffset);
+			int kLength = k.length();
+			char *newCEntryBuff = (char *) malloc(kLength + 4 + sizeof(PageNum));
+			memcpy(newCEntryBuff, &kLength, 4);
+			memcpy(newCEntryBuff + 4, &k, kLength);
+			memcpy(newCEntryBuff + 4 + kLength, &newLeafNodePN, sizeof(PageNum));
+			newChildEntry = newCEntryBuff;
+			//FIXME: I created a space to set pageNum but I didn`t set it.
+		}
+		//Create new leaf node
 		while(leafNodeOffset != freeSpaceOffset)
 		{
 			numOfEntriesS++;
@@ -656,26 +669,20 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 			leafNodeOffset += entSize;
 		}
 
-		/*if(offset < WHOLE_SIZE_FOR_ENTRIES/2)
-		{
-			char * secondPart = (char *) malloc(WHOLE_SIZE_FOR_ENTRIES);
-			memcpy(secondPart, entryToProcess, getFreeSpaceOffset(leafNode) - offset);
-			memcpy(entryToProcess, newEntryStartAdd, newEntrySize);
+		//update second part of Page DIC
+		setRightSiblingPageNum(newLeafNode, getRightSiblingPageNum(leafNode));
+		setLeftSiblingPageNum(newLeafNode, LeafNodePN);
+		setParentPageNum(newLeafNode, getParentPageNum(leafNode));
+		setNodeType(newLeafNode, LEAF_NODE);
+		setTombstone(newLeafNode, -1);
+		setNumOfEnt(newLeafNode, (NumOfEnt)numOfEntriesS);
+		setFreeSpaceOffset(newLeafNode,(SlotOffset) secondPartOffset);
 
-			int secondPartOffset = 0;
-			int firstPartOffset = offset + newEntrySize;
-			while((firstPartOffset + getSizeOfEntryInLeaf(secondPart + secondPartOffset, Attribute.type))
-					< WHOLE_SIZE_FOR_ENTRIES/2)
-			{
-				int entSize = getSizeOfEntryInLeaf(secondPart + secondPartOffset, Attribute.type);
-				memcpy(leafNode + firstPartOffset, secondPart + secondPartOffset, entSize);
-				firstPartOffset += entSize;
-				secondPartOffset += entSize;
-			}
-
-			memcpy(newLeafNode, secondPart + secondPartOffset,
-					getFreeSpaceOffset(leafNode) - firstPartOffset);
-		}*/
+		//Write first part to existing leafNode and update Page DIC
+		memcpy(leafNode, firstPart, firstPartOffset);
+		setRightSiblingPageNum(leafNode, newLeafNodePN);
+		setNumOfEnt(leafNode, (NumOfEnt)numOfEntriesF);
+		setFreeSpaceOffset(leafNode,(SlotOffset) firstPartOffset);
 	}
 	else//newEntry is not needed but we need a new leaf node and we need to
 		//add rid to ridlist and also shift some entries to new node
@@ -683,12 +690,15 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 		int secondPartOffset = 0;
 		int firstPartOffset = 0;
 		int leafNodeOffset = 0;
-		char *firstPart = (char *) malloc(WHOLE_SIZE_FOR_ENTRIES);
-		char *secondPart = (char *) malloc(WHOLE_SIZE_FOR_ENTRIES);
-
+		char fPart[WHOLE_SIZE_FOR_ENTRIES];
+		char *firstPart = fPart;
+		char *secondPart = (char *) newLeafNode;
 		int entSize = 0;
+		int numOfEntriesF = 0;
+
 		while(leafNodeOffset < WHOLE_SIZE_FOR_ENTRIES/2)
 		{
+			numOfEntriesF++;
 			entSize = getSizeOfEntryInLeaf(((char *)leafNode) + leafNodeOffset, Attribute.type);
 			memcpy(firstPart + firstPartOffset, ((char *)leafNode) + leafNodeOffset, entSize);
 			firstPartOffset += entSize;
@@ -704,8 +714,7 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 
 		}
 
-
-
+		//Create newChildNode
 		int freeSpaceOffset = getFreeSpaceOffset(leafNode);
 		if(leafNodeOffset != freeSpaceOffset)
 		{
@@ -714,12 +723,15 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 			char *newCEntryBuff = (char *) malloc(kLength + 4 + sizeof(PageNum));
 			memcpy(newCEntryBuff, &kLength, 4);
 			memcpy(newCEntryBuff + 4, &k, kLength);
+			memcpy(newCEntryBuff + 4 + kLength, &newLeafNodePN, sizeof(PageNum));
 			newChildEntry = newCEntryBuff;
 			//FIXME: I created a space to set pageNum but I didn`t set it.
 		}
-
+		//Create new leaf node
+		int numOfEntriesS = 0;
 		while(leafNodeOffset != freeSpaceOffset)
 		{
+			numOfEntriesS++;
 			entSize = getSizeOfEntryInLeaf(((char *)leafNode) + leafNodeOffset, Attribute.type);
 			memcpy(secondPart + secondPartOffset, ((char *)leafNode) + leafNodeOffset, entSize);
 			secondPartOffset += entSize;
@@ -733,6 +745,21 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 			}
 			leafNodeOffset += entSize;
 		}
+
+		//update second part of Page DIC
+		setRightSiblingPageNum(newLeafNode, getRightSiblingPageNum(leafNode));
+		setLeftSiblingPageNum(newLeafNode, LeafNodePN);
+		setParentPageNum(newLeafNode, getParentPageNum(leafNode));
+		setNodeType(newLeafNode, LEAF_NODE);
+		setTombstone(newLeafNode, -1);
+		setNumOfEnt(newLeafNode, (NumOfEnt)numOfEntriesS);
+		setFreeSpaceOffset(newLeafNode,(SlotOffset) secondPartOffset);
+
+		//Write first part to existing leafNode and update Page DIC
+		memcpy(leafNode, firstPart, firstPartOffset);
+		setRightSiblingPageNum(leafNode, newLeafNodePN);
+		setNumOfEnt(leafNode, (NumOfEnt)numOfEntriesF);
+		setFreeSpaceOffset(leafNode,(SlotOffset) firstPartOffset);
 
 	}
 	//if we will add rid to existing entry check current size + PageNum + SlotOffset < total free space in a PAGE

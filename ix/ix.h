@@ -127,6 +127,7 @@ class IndexManager {
         char tempPage1[PAGE_SIZE];
 
         RC splitLeaf(void *leafNode, void *newLeafNode, void * newChildEntry,
+        		PageNum leafNodePN, PageNum newLeafNodePN,
         		int offset, const Attribute &Attribute, const void *key, const RID &rid);
 };
 
