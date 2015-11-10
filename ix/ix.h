@@ -103,6 +103,8 @@ class IndexManager {
         RC getEntryInLeaf(const void* entryToProcess, AttrType keyType,unsigned entryNum, RID &rid);
         RC setEntryInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid);
 
+        unsigned calNewLeafEntrySize(const void* key, AttrType keyType);
+        unsigned calNewInterEntrySize(const void* key, AttrType keyType);
 
         unsigned getSizeOfEntryInLeaf(const void* entryToProcess, AttrType keyType);
         unsigned getSizeOfEntryInIntermediate(const void* entryToProcess, AttrType keyType);
@@ -114,7 +116,8 @@ class IndexManager {
         bool hasSameKey(const void *key, const void *entryToProcess,  AttrType keyType);
 
 
-        RC _insertEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid);
+        RC _insertEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid,
+        		PageNum &currentNodePage, void *newChildNodeKey, PageNum &newChildNodePage);
 
 
     protected:
@@ -123,8 +126,7 @@ class IndexManager {
 
     private:
         static IndexManager *_index_manager;
-        char tempPage0[PAGE_SIZE];
-        char tempPage1[PAGE_SIZE];
+
 
         RC splitLeaf(void *leafNode, void *newLeafNode, void * newChildEntry,
         		int offset, const Attribute &Attribute, const void *key, const RID &rid);

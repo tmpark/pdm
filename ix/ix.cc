@@ -280,6 +280,46 @@ RC IndexManager::setEntryInLeaf(const void* entryToProcess, AttrType keyType, un
 
 
 
+unsigned IndexManager::calNewLeafEntrySize(const void* key, AttrType keyType)
+{
+	unsigned entrySize = 0;
+
+	if (keyType == TypeInt)
+		entrySize = entrySize + sizeof(int);
+	else if (keyType == TypeReal)
+		entrySize = entrySize + sizeof(float);
+	else if (keyType == TypeVarChar)
+	{
+		int sizeOfVarChar = *((int*)key);
+		entrySize = entrySize + sizeof(int);
+		entrySize = entrySize + sizeOfVarChar;
+	}
+	entrySize = entrySize + sizeof(NumOfEnt);
+	entrySize = entrySize + sizeof(PageNum);
+	entrySize = entrySize + sizeof(SlotOffset);
+	return entrySize;
+}
+
+unsigned IndexManager::calNewInterEntrySize(const void* key, AttrType keyType)
+{
+	unsigned entrySize = 0;
+
+	if (keyType == TypeInt)
+		entrySize = entrySize + sizeof(int);
+	else if (keyType == TypeReal)
+		entrySize = entrySize + sizeof(float);
+	else if (keyType == TypeVarChar)
+	{
+		int sizeOfVarChar = *((int*)key);
+		entrySize = entrySize + sizeof(int);
+		entrySize = entrySize + sizeOfVarChar;
+	}
+	entrySize = entrySize + sizeof(PageNum);
+	return entrySize;
+}
+
+
+
 unsigned IndexManager::getSizeOfEntryInLeaf(const void* entryToProcess, AttrType keyType)
 {
 	unsigned entrySize = 0;
@@ -373,12 +413,12 @@ bool IndexManager::hasSameKey(const void *key, const void *entryToProcess,  Attr
 
 SlotOffset IndexManager::findEntryOffsetToProcess(void *pageToProcess,AttrType attrType, const void *key)
 {
-	RC rc;
+	RC rc = -1;
 	unsigned numOfEntry = getNumOfEnt(pageToProcess);
 	NodeType nodeType = getNodeType(pageToProcess);
 
-	SlotOffset lastBigestEntryOffset = 0;
 	SlotOffset currentEntryOffset = 0;
+	SlotOffset candidateEntryOffset = -1;
 
 
 	for(unsigned i = 0 ; i < numOfEntry ; i++)
@@ -390,10 +430,7 @@ SlotOffset IndexManager::findEntryOffsetToProcess(void *pageToProcess,AttrType a
 			rc = getKeyOfEntry((const void*)entryToProcess, candidateValue);
 	        int objectiveValue = *((int*)key);
 	        if (candidateValue <= objectiveValue)
-	        {
-
-	        	lastBigestEntryOffset = currentEntryOffset;
-	        }
+	        	candidateEntryOffset = currentEntryOffset;
 
 		}
 		else if (attrType == TypeReal)
@@ -402,11 +439,7 @@ SlotOffset IndexManager::findEntryOffsetToProcess(void *pageToProcess,AttrType a
 			rc = getKeyOfEntry((const void*)entryToProcess, candidateValue);
 	        float objectiveValue = *((float*)key);
 	        if (candidateValue <= objectiveValue)
-	        {
-
-	        	lastBigestEntryOffset = currentEntryOffset;
-	        }
-
+	        	candidateEntryOffset = currentEntryOffset;
 		}
 		else if (attrType == TypeVarChar)
 		{
@@ -414,17 +447,14 @@ SlotOffset IndexManager::findEntryOffsetToProcess(void *pageToProcess,AttrType a
 			rc = getKeyOfEntry((const void*)entryToProcess, candidateValue);
 	        string objectiveValue = extractVarChar(key);
 	        if (candidateValue <= objectiveValue)
-	        {
-
-	        	lastBigestEntryOffset = currentEntryOffset;
-	        }
-
+	        	candidateEntryOffset = currentEntryOffset;
 		}
 
-		if(lastBigestEntryOffset != currentEntryOffset)
-		{
-			return lastBigestEntryOffset;
-		}
+
+		if(candidateEntryOffset != currentEntryOffset)
+			return candidateEntryOffset;
+
+
 
 		//next entry
 		if(nodeType == LEAF_NODE)
@@ -433,7 +463,7 @@ SlotOffset IndexManager::findEntryOffsetToProcess(void *pageToProcess,AttrType a
 			currentEntryOffset = currentEntryOffset + getSizeOfEntryInIntermediate(entryToProcess, attrType);
 	}
 
-	return currentEntryOffset;
+	return candidateEntryOffset;
 }
 
 
@@ -487,33 +517,125 @@ RC IndexManager::closeFile(IXFileHandle &ixfileHandle)
 
 }
 
-RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid)
+RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid,
+		PageNum &currentNodePage, void *newChildNodeKey, PageNum &newChildNodePage)
 {
 	RC rc = -1;
+	char tempPage0[PAGE_SIZE];
 	void *pageToProcess = tempPage0;
-    rc = ixfileHandle.fileHandle.readPage(rid.pageNum,pageToProcess);//Read Page
+
+    rc = ixfileHandle.fileHandle.readPage(currentNodePage,pageToProcess);//Read Page
 	if(rc != 0)
 		return rc;
 
+	NodeType nodeType = getNodeType(pageToProcess);
 	SlotOffset entryOffset = findEntryOffsetToProcess(pageToProcess,attribute.type,key);
 	char *entryToProcess = NULL;
-	if(entryOffset != -1)
-		entryToProcess = pageToProcess + entryToProcess;
 
 
-    NodeType nodeType = getNodeType(pageToProcess);
-
-
-    if (nodeType == ROOT_NODE || nodeType == INTER_NODE)
+    if (nodeType == INTER_NODE)
     {
+    	PageNum newChildPage = -1;
+    	PageNum childNodePage = -1;
+    	//left most child pointer
+    	if(entryOffset == -1)
+    	{
+    		childNodePage = getLeftMostChildPageNum(pageToProcess);
+    		newChildPage = _insertEntry(ixfileHandle,attribute,key,rid,
+    				childNodePage,newChildNodeKey,newChildNodePage);
+    	}
+    	else //general entry to point child
+    	{
+    		entryToProcess = pageToProcess + entryOffset;
+    		childNodePage = getChildOfIntermediateEntry(entryToProcess,attribute.type);
+    		newChildPage =_insertEntry(ixfileHandle,attribute,key,rid,
+    				childNodePage,newChildNodeKey,newChildNodePage);
+    	}
+//Fixme
+    	if(newChildPage == -1)
+    		return -1;
+    	else //child was splited
+    	{
+    		//unsigned entrySize = calNewInterEntrySize()
 
 
+    	}
 
     }
     else if(nodeType == LEAF_NODE)
     {
+    	SlotOffset offsetToInsert = 0;
+
+        //-1 means first position
+    	if(entryOffset == -1)
+    		offsetToInsert = 0;
+    	//position to insert should be next to the found entry
+    	else
+    	{
+    		char *entryTemp = pageToProcess + entryOffset;
+    		offsetToInsert = entryOffset + getSizeOfEntryInLeaf(entryTemp,attribute.type);
+    	}
+
+    	entryToProcess = pageToProcess + offsetToInsert;
+
+    	//Overflowed Node: go inside overflow page and return null
 
 
+
+
+    	unsigned freeSpaceSize = getFreeSpaceSize(pageToProcess);
+
+    	//key is the highest value
+    	if(offsetToInsert == getFreeSpaceOffset(pageToProcess))
+    	{
+    		//there is enough space
+    		if(freeSpaceSize > calNewLeafEntrySize(key, attribute.type))
+    		{
+    			//insert
+    			//return -1
+    		}
+    		else
+    		{
+    			//split
+    			//return new node;
+    		}
+
+    	}
+
+    	//new key inserted
+    	if(!hasSameKey(key,entryToProcess,attribute.type))
+    	{
+    		//there is enough space
+    		unsigned entrySize = calNewLeafEntrySize(key, attribute.type);
+    		if(freeSpaceSize > entrySize)
+    		{
+    			//push as much as entrySize
+    			//insert
+    			//return -1
+    		}
+    		else
+    		{
+    			//split
+    			//return new node;
+    		}
+
+    	}
+
+    	//same key
+    	unsigned entrySize = sizeof(PageNum) + sizeof(SlotOffset);
+
+		//there is enough space
+		if(freeSpaceSize > entrySize)
+		{
+			//push as much as entrySize
+			//insert
+			//return -1
+		}
+		else
+		{
+			//split
+			//return new node;
+		}
 
     }
 }
