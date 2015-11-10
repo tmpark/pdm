@@ -599,7 +599,8 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 
 	if(newEntryNeeded)//create new entry and shift entries to new leaf node
 	{
-		char *newEntry = (char *) malloc(200);
+		char newEnt[400];
+		char *newEntry = newEnt;
 		char *newEntryStartAddr = newEntry;
 		int keyLength = *(int *)key;
 		memcpy(newEntry, key, keyLength + 4);//copying key
@@ -617,7 +618,7 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 		int firstPartOffset = 0;
 		int leafNodeOffset = 0;
 		char *firstPart = (char *) malloc(WHOLE_SIZE_FOR_ENTRIES);
-		char *secondPart = (char *) malloc(WHOLE_SIZE_FOR_ENTRIES);
+		char *secondPart = newLeafNode;
 
 		int entSize = 0;
 		int numOfEntriesF = 0;
@@ -630,8 +631,8 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 				firstPartOffset += newEntrySize;
 				continue;
 			}
-			entSize = getSizeOfEntryInLeaf(leafNode + leafNodeOffset, Attribute.type);
-			memcpy(firstPart + firstPartOffset, leafNode + leafNodeOffset, entSize);
+			entSize = getSizeOfEntryInLeaf(((char *)leafNode) + leafNodeOffset, Attribute.type);
+			memcpy(firstPart + firstPartOffset, ((char *)leafNode) + leafNodeOffset, entSize);
 			firstPartOffset += entSize;
 			leafNodeOffset += entSize;
 		}
@@ -649,8 +650,8 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 				secondPartOffset += newEntrySize;
 				continue;
 			}
-			entSize = getSizeOfEntryInLeaf(leafNode + leafNodeOffset, Attribute.type);
-			memcpy(secondPart + secondPartOffset, leafNode + leafNodeOffset, entSize);
+			entSize = getSizeOfEntryInLeaf(((char *)leafNode) + leafNodeOffset, Attribute.type);
+			memcpy(secondPart + secondPartOffset, ((char *)leafNode) + leafNodeOffset, entSize);
 			secondPartOffset += entSize;
 			leafNodeOffset += entSize;
 		}
@@ -688,8 +689,8 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 		int entSize = 0;
 		while(leafNodeOffset < WHOLE_SIZE_FOR_ENTRIES/2)
 		{
-			entSize = getSizeOfEntryInLeaf(leafNode + leafNodeOffset, Attribute.type);
-			memcpy(firstPart + firstPartOffset, leafNode + leafNodeOffset, entSize);
+			entSize = getSizeOfEntryInLeaf(((char *)leafNode) + leafNodeOffset, Attribute.type);
+			memcpy(firstPart + firstPartOffset, ((char *)leafNode) + leafNodeOffset, entSize);
 			firstPartOffset += entSize;
 			if(leafNodeOffset == offset)
 			{
@@ -703,11 +704,24 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 
 		}
 
+
+
 		int freeSpaceOffset = getFreeSpaceOffset(leafNode);
+		if(leafNodeOffset != freeSpaceOffset)
+		{
+			string k = extractVarChar(((char *)leafNode) + leafNodeOffset);
+			int kLength = k.length();
+			char *newCEntryBuff = (char *) malloc(kLength + 4 + sizeof(PageNum));
+			memcpy(newCEntryBuff, &kLength, 4);
+			memcpy(newCEntryBuff + 4, &k, kLength);
+			newChildEntry = newCEntryBuff;
+			//FIXME: I created a space to set pageNum but I didn`t set it.
+		}
+
 		while(leafNodeOffset != freeSpaceOffset)
 		{
-			entSize = getSizeOfEntryInLeaf(leafNode + leafNodeOffset, Attribute.type);
-			memcpy(secondPart + secondPartOffset, leafNode + leafNodeOffset, entSize);
+			entSize = getSizeOfEntryInLeaf(((char *)leafNode) + leafNodeOffset, Attribute.type);
+			memcpy(secondPart + secondPartOffset, ((char *)leafNode) + leafNodeOffset, entSize);
 			secondPartOffset += entSize;
 			if(leafNodeOffset == offset)
 			{
