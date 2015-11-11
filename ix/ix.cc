@@ -147,9 +147,9 @@ RC IndexManager::getKeyOfEntry(const void* entryToProcess, T &value)
 
 RC IndexManager::getKeyOfEntry(const void* entryToProcess, string &value)
 {
-    int sizeOfVarChar = *((int*)entryToProcess);
-    char *varChar = (char*)entryToProcess + sizeof(int);
-    value = string(varChar,sizeOfVarChar);
+	int sizeOfVarChar = *((int*)entryToProcess);
+	char *varChar = (char*)entryToProcess + sizeof(int);
+	value = string(varChar,sizeOfVarChar);
 	return 0;
 }
 
@@ -181,8 +181,8 @@ PageNum IndexManager::getChildOfIntermediateEntry(const void* entryToProcess, At
 	}
 	else if (keyType == TypeVarChar)
 	{
-        int sizeOfVarChar = *((int*)entryToProcess);
-        childPtr = (char*)entryToProcess + sizeof(int) + sizeOfVarChar;
+		int sizeOfVarChar = *((int*)entryToProcess);
+		childPtr = (char*)entryToProcess + sizeof(int) + sizeOfVarChar;
 	}
 	return *((PageNum*)childPtr);
 }
@@ -222,8 +222,8 @@ NumOfEnt IndexManager::getNumOfRIDsInLeaf(const void* entryToProcess, AttrType k
 	}
 	else if (keyType == TypeVarChar)
 	{
-        int sizeOfVarChar = *((int*)entryToProcess);
-        numOfRidsPtr = (char*)entryToProcess + sizeof(int) + sizeOfVarChar;
+		int sizeOfVarChar = *((int*)entryToProcess);
+		numOfRidsPtr = (char*)entryToProcess + sizeof(int) + sizeOfVarChar;
 	}
 	return *((NumOfEnt*)numOfRidsPtr);
 }
@@ -238,13 +238,13 @@ RC IndexManager::setNumOfRIDsInLeaf(const void* entryToProcess, AttrType keyType
 	}
 	else if (keyType == TypeReal)
 	{
-	    numOfRidsPtr = (char*)entryToProcess + sizeof(float);
+		numOfRidsPtr = (char*)entryToProcess + sizeof(float);
 		*((NumOfEnt*)numOfRidsPtr) = numOfRids;
 	}
 	else if (keyType == TypeVarChar)
 	{
-        int sizeOfVarChar = *((int*)entryToProcess);
-        numOfRidsPtr = (char*)entryToProcess + sizeof(int) + sizeOfVarChar;
+		int sizeOfVarChar = *((int*)entryToProcess);
+		numOfRidsPtr = (char*)entryToProcess + sizeof(int) + sizeOfVarChar;
 
 	}
 	*((NumOfEnt*)numOfRidsPtr) = numOfRids;
@@ -268,8 +268,8 @@ RC IndexManager::setEntryInLeaf(const void* entryToProcess, AttrType keyType, un
 	}
 	else if (keyType == TypeVarChar)
 	{
-        int sizeOfVarChar = *((int*)entryToProcess);
-        ridsPtr = (char*)entryToProcess + sizeof(int) + sizeOfVarChar + sizeof(NumOfEnt) + entryNum*(sizeof(PageNum) + sizeof(SlotOffset));
+		int sizeOfVarChar = *((int*)entryToProcess);
+		ridsPtr = (char*)entryToProcess + sizeof(int) + sizeOfVarChar + sizeof(NumOfEnt) + entryNum*(sizeof(PageNum) + sizeof(SlotOffset));
 	}
 
 	*((unsigned*)ridsPtr) = rid.pageNum;
@@ -407,7 +407,7 @@ bool IndexManager::hasSameKey(const void *key, const void *entryToProcess,  Attr
 		getKeyOfEntry(entryToProcess,value2);
 		return (value1 == value2);
 	}
-    return false;
+	return false;
 }
 
 
@@ -428,26 +428,26 @@ SlotOffset IndexManager::findEntryOffsetToProcess(void *pageToProcess,AttrType a
 		{
 			int candidateValue;
 			rc = getKeyOfEntry((const void*)entryToProcess, candidateValue);
-	        int objectiveValue = *((int*)key);
-	        if (candidateValue <= objectiveValue)
-	        	candidateEntryOffset = currentEntryOffset;
+			int objectiveValue = *((int*)key);
+			if (candidateValue <= objectiveValue)
+				candidateEntryOffset = currentEntryOffset;
 
 		}
 		else if (attrType == TypeReal)
 		{
 			float candidateValue;
 			rc = getKeyOfEntry((const void*)entryToProcess, candidateValue);
-	        float objectiveValue = *((float*)key);
-	        if (candidateValue <= objectiveValue)
-	        	candidateEntryOffset = currentEntryOffset;
+			float objectiveValue = *((float*)key);
+			if (candidateValue <= objectiveValue)
+				candidateEntryOffset = currentEntryOffset;
 		}
 		else if (attrType == TypeVarChar)
 		{
 			string candidateValue;
 			rc = getKeyOfEntry((const void*)entryToProcess, candidateValue);
-	        string objectiveValue = extractVarChar(key);
-	        if (candidateValue <= objectiveValue)
-	        	candidateEntryOffset = currentEntryOffset;
+			string objectiveValue = extractVarChar(key);
+			if (candidateValue <= objectiveValue)
+				candidateEntryOffset = currentEntryOffset;
 		}
 
 
@@ -458,7 +458,7 @@ SlotOffset IndexManager::findEntryOffsetToProcess(void *pageToProcess,AttrType a
 
 		//next entry
 		if(nodeType == LEAF_NODE)
-		    currentEntryOffset = currentEntryOffset + getSizeOfEntryInLeaf(entryToProcess, attrType);
+			currentEntryOffset = currentEntryOffset + getSizeOfEntryInLeaf(entryToProcess, attrType);
 		else if (nodeType == ROOT_NODE || nodeType == INTER_NODE)
 			currentEntryOffset = currentEntryOffset + getSizeOfEntryInIntermediate(entryToProcess, attrType);
 	}
@@ -469,9 +469,9 @@ SlotOffset IndexManager::findEntryOffsetToProcess(void *pageToProcess,AttrType a
 
 string IndexManager::extractVarChar(const void* data)
 {
-    int sizeOfVarChar = *((int*)data);
-    char *varChar = (char*)data + sizeof(int);
-    return string(varChar,sizeOfVarChar);
+	int sizeOfVarChar = *((int*)data);
+	char *varChar = (char*)data + sizeof(int);
+	return string(varChar,sizeOfVarChar);
 }
 
 IndexManager* IndexManager::instance()
@@ -500,7 +500,7 @@ RC IndexManager::createFile(const string &fileName)
 RC IndexManager::destroyFile(const string &fileName)
 {
 	RC success = PagedFileManager::instance()->destroyFile(fileName);
-		return success;
+	return success;
 }
 
 RC IndexManager::openFile(const string &fileName, IXFileHandle &ixfileHandle)
@@ -524,7 +524,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 	char tempPage0[PAGE_SIZE];
 	void *pageToProcess = tempPage0;
 
-    rc = ixfileHandle.fileHandle.readPage(currentNodePage,pageToProcess);//Read Page
+	rc = ixfileHandle.fileHandle.readPage(currentNodePage,pageToProcess);//Read Page
 	if(rc != 0)
 		return rc;
 
@@ -533,96 +533,96 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 	char *entryToProcess = NULL;
 
 
-    if (nodeType == INTER_NODE)
-    {
-    	PageNum newChildPage = -1;
-    	PageNum childNodePage = -1;
-    	//left most child pointer
-    	if(entryOffset == -1)
-    	{
-    		childNodePage = getLeftMostChildPageNum(pageToProcess);
-    		newChildPage = _insertEntry(ixfileHandle,attribute,key,rid,
-    				childNodePage,newChildNodeKey,newChildNodePage);
-    	}
-    	else //general entry to point child
-    	{
-    		entryToProcess = pageToProcess + entryOffset;
-    		childNodePage = getChildOfIntermediateEntry(entryToProcess,attribute.type);
-    		newChildPage =_insertEntry(ixfileHandle,attribute,key,rid,
-    				childNodePage,newChildNodeKey,newChildNodePage);
-    	}
-//Fixme
-    	if(newChildPage == -1)
-    		return -1;
-    	else //child was splited
-    	{
-    		//unsigned entrySize = calNewInterEntrySize()
+	if (nodeType == INTER_NODE)
+	{
+		PageNum newChildPage = -1;
+		PageNum childNodePage = -1;
+		//left most child pointer
+		if(entryOffset == -1)
+		{
+			childNodePage = getLeftMostChildPageNum(pageToProcess);
+			newChildPage = _insertEntry(ixfileHandle,attribute,key,rid,
+					childNodePage,newChildNodeKey,newChildNodePage);
+		}
+		else //general entry to point child
+		{
+			entryToProcess = pageToProcess + entryOffset;
+			childNodePage = getChildOfIntermediateEntry(entryToProcess,attribute.type);
+			newChildPage =_insertEntry(ixfileHandle,attribute,key,rid,
+					childNodePage,newChildNodeKey,newChildNodePage);
+		}
+		//Fixme
+		if(newChildPage == -1)
+			return -1;
+		else //child was splited
+		{
+			//unsigned entrySize = calNewInterEntrySize()
 
 
-    	}
+		}
 
-    }
-    else if(nodeType == LEAF_NODE)
-    {
-    	SlotOffset offsetToInsert = 0;
+	}
+	else if(nodeType == LEAF_NODE)
+	{
+		SlotOffset offsetToInsert = 0;
 
-        //-1 means first position
-    	if(entryOffset == -1)
-    		offsetToInsert = 0;
-    	//position to insert should be next to the found entry
-    	else
-    	{
-    		char *entryTemp = pageToProcess + entryOffset;
-    		offsetToInsert = entryOffset + getSizeOfEntryInLeaf(entryTemp,attribute.type);
-    	}
+		//-1 means first position
+		if(entryOffset == -1)
+			offsetToInsert = 0;
+		//position to insert should be next to the found entry
+		else
+		{
+			char *entryTemp = pageToProcess + entryOffset;
+			offsetToInsert = entryOffset + getSizeOfEntryInLeaf(entryTemp,attribute.type);
+		}
 
-    	entryToProcess = pageToProcess + offsetToInsert;
+		entryToProcess = pageToProcess + offsetToInsert;
 
-    	//Overflowed Node: go inside overflow page and return null
-
-
+		//Overflowed Node: go inside overflow page and return null
 
 
-    	unsigned freeSpaceSize = getFreeSpaceSize(pageToProcess);
 
-    	//key is the highest value
-    	if(offsetToInsert == getFreeSpaceOffset(pageToProcess))
-    	{
-    		//there is enough space
-    		if(freeSpaceSize > calNewLeafEntrySize(key, attribute.type))
-    		{
-    			//insert
-    			//return -1
-    		}
-    		else
-    		{
-    			//split
-    			//return new node;
-    		}
 
-    	}
+		unsigned freeSpaceSize = getFreeSpaceSize(pageToProcess);
 
-    	//new key inserted
-    	if(!hasSameKey(key,entryToProcess,attribute.type))
-    	{
-    		//there is enough space
-    		unsigned entrySize = calNewLeafEntrySize(key, attribute.type);
-    		if(freeSpaceSize > entrySize)
-    		{
-    			//push as much as entrySize
-    			//insert
-    			//return -1
-    		}
-    		else
-    		{
-    			//split
-    			//return new node;
-    		}
+		//key is the highest value
+		if(offsetToInsert == getFreeSpaceOffset(pageToProcess))
+		{
+			//there is enough space
+			if(freeSpaceSize > calNewLeafEntrySize(key, attribute.type))
+			{
+				//insert
+				//return -1
+			}
+			else
+			{
+				//split
+				//return new node;
+			}
 
-    	}
+		}
 
-    	//same key
-    	unsigned entrySize = sizeof(PageNum) + sizeof(SlotOffset);
+		//new key inserted
+		if(!hasSameKey(key,entryToProcess,attribute.type))
+		{
+			//there is enough space
+			unsigned entrySize = calNewLeafEntrySize(key, attribute.type);
+			if(freeSpaceSize > entrySize)
+			{
+				//push as much as entrySize
+				//insert
+				//return -1
+			}
+			else
+			{
+				//split
+				//return new node;
+			}
+
+		}
+
+		//same key
+		unsigned entrySize = sizeof(PageNum) + sizeof(SlotOffset);
 
 		//there is enough space
 		if(freeSpaceSize > entrySize)
@@ -637,7 +637,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 			//return new node;
 		}
 
-    }
+	}
 }
 
 RC IndexManager::insertEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid)
@@ -659,6 +659,135 @@ RC IndexManager::insertEntry(IXFileHandle &ixfileHandle, const Attribute &attrib
 	return -1;
 }
 
+RC IndexManager::splitIntermediate(void *interNode, void *newInterNode, void *newRootNode,
+		void *newChildEntry, void *entry, const AttrType entryType, PageNum interNodePN,
+		PageNum newInterNodePN, int offset)
+{
+
+
+	int secondPartOffset = 0;
+	int firstPartOffset = 0;
+	int interNodeOffset = 0;
+	char fPart[WHOLE_SIZE_FOR_ENTRIES];
+	char *firstPart = fPart;
+	char *secondPart = (char *) newInterNode;
+
+	int entSize = 0;
+	int newEntrySize = getSizeOfEntryInIntermediate(entry, entryType);
+	int numOfEntriesF = 0;
+	while(interNodeOffset < WHOLE_SIZE_FOR_ENTRIES/2)
+	{
+		numOfEntriesF++;
+		if(interNodeOffset == offset)
+		{
+			memcpy(firstPart + firstPartOffset, entry, newEntrySize);
+			firstPartOffset += newEntrySize;
+			continue;
+		}
+		entSize = getSizeOfEntryInIntermediate(((char *)interNode) + interNodeOffset, entryType);
+		memcpy(firstPart + firstPartOffset, ((char *)interNode) + interNodeOffset, entSize);
+		firstPartOffset += entSize;
+		interNodeOffset += entSize;
+	}
+
+
+	//Create newChildNode and setLeftMostChild of newInterNode
+	int numOfEntriesS = 0;
+	int freeSpaceOffset = getFreeSpaceOffset(interNode);
+	int newChildEntrySize = 0;
+	if(interNodeOffset != freeSpaceOffset)
+	{
+		char *newCEntryBuff = (char *)newChildEntry;
+
+		if(entryType == TypeInt)
+		{
+			setKeyOfEntry(newChildEntry,*(int *)(((char *)interNode) + interNodeOffset));
+			memcpy(newCEntryBuff + sizeof(int), &newInterNodePN, sizeof(PageNum));
+			//setLeftChild
+			int *pageNum = (int *)(((char *)interNode) + interNodeOffset + sizeof(int));
+			setLeftMostChildPageNum(secondPart, *pageNum);
+			newChildEntrySize = sizeof(int) + sizeof(PageNum);
+		}
+		else if(entryType == TypeReal)
+		{
+			setKeyOfEntry(newChildEntry,*(float *)(((char *)interNode) + interNodeOffset));
+			memcpy(newCEntryBuff + sizeof(float), &newInterNodePN, sizeof(PageNum));
+			int *pageNum = (int *)(((char *)interNode) + interNodeOffset + sizeof(float));
+			setLeftMostChildPageNum(secondPart, *pageNum);
+			newChildEntrySize = sizeof(float) + sizeof(PageNum);
+		}
+		else
+		{
+			string k = extractVarChar(((char *)interNode) + interNodeOffset);
+			int kLength = k.length();
+			char *newCEntryBuff = (char *)newChildEntry;
+			memcpy(newCEntryBuff, &kLength, 4);
+			memcpy(newCEntryBuff + 4, &k, kLength);
+			memcpy(newCEntryBuff + 4 + kLength, &newInterNodePN, sizeof(PageNum));
+			int *pageNum = (int *)(((char *)interNode) + interNodeOffset + sizeof(int) + kLength);
+			newChildEntrySize = sizeof(int) + kLength + sizeof(PageNum);
+			setLeftMostChildPageNum(secondPart, *pageNum);
+		}
+	}
+
+	//Create new inter node
+	while(interNodeOffset != freeSpaceOffset)
+	{
+		numOfEntriesS++;
+		if(interNodeOffset == offset)
+		{
+			memcpy(secondPart + secondPartOffset, entry, newEntrySize);
+			secondPartOffset += newEntrySize;
+			continue;
+		}
+		entSize = getSizeOfEntryInIntermediate(((char *)interNode) + interNodeOffset, entryType);
+		memcpy(secondPart + secondPartOffset, ((char *)interNode) + interNodeOffset, entSize);
+		secondPartOffset += entSize;
+		interNodeOffset += entSize;
+	}
+
+	//FIXME: If intermediate node splits, it means parent page number for child nodes changes
+	//FIXME:(cont) we dont have any method to correct it yet. We may need it in the future
+	//update second part of Page DIC
+	setRightSiblingPageNum(newInterNode, getRightSiblingPageNum(interNode));
+	setLeftSiblingPageNum(newInterNode, interNodePN);
+	setParentPageNum(newInterNode, getParentPageNum(interNode));
+	setNodeType(newInterNode, INTER_NODE);
+	setTombstone(newInterNode, -1);
+	setNumOfEnt(newInterNode, (NumOfEnt)numOfEntriesS);
+	setFreeSpaceOffset(newInterNode,(SlotOffset) secondPartOffset);
+
+	//Write first part to existing interNode and update Page DIC
+	memcpy(interNode, firstPart, firstPartOffset);
+	setRightSiblingPageNum(interNode, newInterNodePN);
+	setNumOfEnt(interNode, (NumOfEnt)numOfEntriesF);
+	setFreeSpaceOffset(interNode,(SlotOffset) firstPartOffset);
+
+
+	if(newRootNode == NULL)
+	{
+		setLeftMostChildPageNum(newRootNode, interNodePN);
+		memcpy(newRootNode, newChildEntry, newChildEntrySize);
+		//FIXME: should I set newChildEntry to NULL???
+		setParentPageNum(newInterNode, 0);
+		setParentPageNum(interNode, 0);
+		setNodeType(newRootNode, INTER_NODE);
+		setTombstone(newRootNode, -1);
+		setNumOfEnt(newRootNode, 1);
+		setFreeSpaceOffset(newRootNode, newChildEntrySize);
+
+	}
+	//if we will add rid to existing entry check current size + PageNum + SlotOffset < total free space in a PAGE
+	//Or simply check numofentries =? 1. HAha it is more smarter way.
+	//Depending on the result: newInterNode = overflow page or newInterNode = leaf page
+
+	//if newInterNode == leaf page
+	//
+
+	return 0;
+}
+
+
 RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntry,
 		PageNum LeafNodePN, PageNum newLeafNodePN,
 		int offset, const Attribute &Attribute, const void *key, const RID &rid)
@@ -666,6 +795,7 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 
 	//check whether we will add rid to existing entry or add new entry to node
 	bool newEntryNeeded = true;
+
 
 	char* entryToProcess = ((char *)leafNode) + offset;
 	if(Attribute.type == TypeInt)
@@ -734,6 +864,12 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 				continue;
 			}
 			entSize = getSizeOfEntryInLeaf(((char *)leafNode) + leafNodeOffset, Attribute.type);
+			if(leafNodeOffset + entSize > WHOLE_SIZE_FOR_ENTRIES)
+			{
+				break; //Nice and easy solution to special case where last entry to
+				//this node is very big so that it causes overflow in the node and
+				//writes to page dic.
+			}
 			memcpy(firstPart + firstPartOffset, ((char *)leafNode) + leafNodeOffset, entSize);
 			firstPartOffset += entSize;
 			leafNodeOffset += entSize;
@@ -744,12 +880,31 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 		int freeSpaceOffset = getFreeSpaceOffset(leafNode);
 		if(leafNodeOffset != freeSpaceOffset)
 		{
-			string k = extractVarChar(((char *)leafNode) + leafNodeOffset);
-			int kLength = k.length();
 			char *newCEntryBuff = (char *)newChildEntry;
-			memcpy(newCEntryBuff, &kLength, 4);
-			memcpy(newCEntryBuff + 4, &k, kLength);
-			memcpy(newCEntryBuff + 4 + kLength, &newLeafNodePN, sizeof(PageNum));
+
+			if(Attribute.type == TypeInt)
+			{
+				setKeyOfEntry(newChildEntry,*(int *)(((char *)leafNode) + leafNodeOffset));
+				memcpy(newCEntryBuff + sizeof(int), &newLeafNodePN, sizeof(PageNum));
+			}
+			else if(Attribute.type == TypeReal)
+			{
+				setKeyOfEntry(newChildEntry,*(float *)(((char *)leafNode) + leafNodeOffset));
+				memcpy(newCEntryBuff + sizeof(float), &newLeafNodePN, sizeof(PageNum));
+			}
+			else
+			{
+				string k = extractVarChar(((char *)leafNode) + leafNodeOffset);
+				int kLength = k.length();
+				char *newCEntryBuff = (char *)newChildEntry;
+				memcpy(newCEntryBuff, &kLength, 4);
+				memcpy(newCEntryBuff + 4, &k, kLength);
+				memcpy(newCEntryBuff + 4 + kLength, &newLeafNodePN, sizeof(PageNum));
+			}
+		}
+		else
+		{
+			return -1; //means that we did not split and probably it will cause an error.
 		}
 		//Create new leaf node
 		while(leafNodeOffset != freeSpaceOffset)
@@ -798,6 +953,14 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 		{
 			numOfEntriesF++;
 			entSize = getSizeOfEntryInLeaf(((char *)leafNode) + leafNodeOffset, Attribute.type);
+			if(leafNodeOffset + entSize + sizeof(PageNum)
+					+ sizeof(SlotOffset) > WHOLE_SIZE_FOR_ENTRIES)
+			{
+				break; //Nice and easy solution to special case where last entry to
+				//this node is very big so that it causes overflow in the node and
+				//writes to page dic.
+			}
+
 			memcpy(firstPart + firstPartOffset, ((char *)leafNode) + leafNodeOffset, entSize);
 			firstPartOffset += entSize;
 			if(leafNodeOffset == offset)
@@ -816,14 +979,31 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 		int freeSpaceOffset = getFreeSpaceOffset(leafNode);
 		if(leafNodeOffset != freeSpaceOffset)
 		{
-			string k = extractVarChar(((char *)leafNode) + leafNodeOffset);
-			int kLength = k.length();
-			char *newCEntryBuff = (char *) malloc(kLength + 4 + sizeof(PageNum));
-			memcpy(newCEntryBuff, &kLength, 4);
-			memcpy(newCEntryBuff + 4, &k, kLength);
-			memcpy(newCEntryBuff + 4 + kLength, &newLeafNodePN, sizeof(PageNum));
-			newChildEntry = newCEntryBuff;
-			//FIXME: I created a space to set pageNum but I didn`t set it.
+			char *newCEntryBuff = (char *)newChildEntry;
+
+			if(Attribute.type == TypeInt)
+			{
+				setKeyOfEntry(newChildEntry,*(int *)(((char *)leafNode) + leafNodeOffset));
+				memcpy(newCEntryBuff + sizeof(int), &newLeafNodePN, sizeof(PageNum));
+			}
+			else if(Attribute.type == TypeReal)
+			{
+				setKeyOfEntry(newChildEntry,*(float *)(((char *)leafNode) + leafNodeOffset));
+				memcpy(newCEntryBuff + sizeof(float), &newLeafNodePN, sizeof(PageNum));
+			}
+			else
+			{
+				string k = extractVarChar(((char *)leafNode) + leafNodeOffset);
+				int kLength = k.length();
+				char *newCEntryBuff = (char *)newChildEntry;
+				memcpy(newCEntryBuff, &kLength, 4);
+				memcpy(newCEntryBuff + 4, &k, kLength);
+				memcpy(newCEntryBuff + 4 + kLength, &newLeafNodePN, sizeof(PageNum));
+			}
+		}
+		else
+		{
+			return -1; //means that we did not split and probably it will cause an error.
 		}
 		//Create new leaf node
 		int numOfEntriesS = 0;
