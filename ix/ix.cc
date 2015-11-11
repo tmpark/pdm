@@ -746,12 +746,10 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 		{
 			string k = extractVarChar(((char *)leafNode) + leafNodeOffset);
 			int kLength = k.length();
-			char *newCEntryBuff = (char *) malloc(kLength + 4 + sizeof(PageNum));
+			char *newCEntryBuff = (char *)newChildEntry;
 			memcpy(newCEntryBuff, &kLength, 4);
 			memcpy(newCEntryBuff + 4, &k, kLength);
 			memcpy(newCEntryBuff + 4 + kLength, &newLeafNodePN, sizeof(PageNum));
-			newChildEntry = newCEntryBuff;
-			//FIXME: I created a space to set pageNum but I didn`t set it.
 		}
 		//Create new leaf node
 		while(leafNodeOffset != freeSpaceOffset)
