@@ -18,8 +18,10 @@ typedef unsigned short NumOfEnt;
 #define INTER_NODE 'I'
 #define LEAF_NODE 'L'
 
+
 //freespace, number of entries, tombstone, node type, parent page num, left sibling page num, right sibling page num, left child page num
 #define PAGE_DIC_SIZE (sizeof(SlotOffset) + sizeof(NumOfEnt) + sizeof(PageNum) + sizeof(NodeType) + sizeof(PageNum) + sizeof(PageNum) + sizeof(PageNum) + sizeof(PageNum))
+#define OVERFLOW_PAGE_DIC_SIZE (sizeof(SlotOffset) + sizeof(NumOfEnt) + sizeof(PageNum))
 #define WHOLE_SIZE_FOR_ENTRIES (PAGE_SIZE - PAGE_DIC_SIZE)
 
 
@@ -73,8 +75,6 @@ class IndexManager {
         RC setNodeType(void* pageToProcess, NodeType nodeType);
         PageNum getParentPageNum(const void* pageToProcess);
         RC setParentPageNum(void* pageToProcess, PageNum parentPageNum);
-        SlotOffset getEntryOffset(const void* pageToProcess,unsigned int entryNum);
-        RC setEntryOffset(void* pageToProcess, unsigned int entryNum, SlotOffset entryOffset);
         PageNum getLeftSiblingPageNum(const void* pageToProcess);
         RC setLeftSiblingPageNum(void* pageToProcess, PageNum leftSiblingPageNum);
         PageNum getRightSiblingPageNum(const void* pageToProcess);
@@ -82,6 +82,7 @@ class IndexManager {
         PageNum getLeftMostChildPageNum(const void* pageToProcess);
         RC setLeftMostChildPageNum(void* pageToProcess, PageNum leftChildPageNum);
         unsigned getFreeSpaceSize(void* pageToProcess);
+        unsigned getFreeSpaceSizeForOverflowPage(void* pageToProcess);
 
 
         /*******Entrywide helper functions********/
@@ -100,7 +101,7 @@ class IndexManager {
         NumOfEnt getNumOfRIDsInLeaf(const void* entryToProcess, AttrType keyType);
         RC setNumOfRIDsInLeaf(const void* entryToProcess, AttrType keyType, NumOfEnt numOfRids);
 
-        RC getEntryInLeaf(const void* entryToProcess, AttrType keyType,unsigned entryNum, RID &rid);
+        RC getEntryInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid);
         RC setEntryInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid);
 
         unsigned calNewLeafEntrySize(const void* key, AttrType keyType);
@@ -112,12 +113,18 @@ class IndexManager {
         SlotOffset findEntryOffsetToProcess(void *pageToProcess,AttrType attrType, const void *key);
 
         string extractVarChar(const void* data);
+        RC pushEntries(void *pageToProcess,SlotOffset from,unsigned amountToMove);
 
         bool hasSameKey(const void *key, const void *entryToProcess,  AttrType keyType);
 
 
         RC _insertEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid,
         		PageNum &currentNodePage, void *newChildNodeKey, PageNum &newChildNodePage);
+        RC putEntryInItermediate(void *entryToProcess, AttrType attrType, const void *key, PageNum pageNum);
+        RC putEntryInLeaf(void *entryToProcess, AttrType attrType, const void *key, RID rid, bool existing);
+
+
+        RC insertEntryInOverflowPage(IXFileHandle &ixfileHandle, void *overFlowPageToProcess, const RID &rid);
 
 
     protected:
@@ -126,7 +133,6 @@ class IndexManager {
 
     private:
         static IndexManager *_index_manager;
-
 
         RC splitLeaf(void *leafNode, void *newLeafNode, void * newChildEntry,
         		int offset, const Attribute &Attribute, const void *key, const RID &rid);
