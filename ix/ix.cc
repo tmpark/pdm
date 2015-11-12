@@ -779,11 +779,14 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 				char *newEntryPtr = (char*)pageToProcess + offsetToInsert;
 				rc = putEntryInItermediate(newEntryPtr,attribute.type,newChildNodeKey,newChildNodePage);
 
+				NumOfEnt numOfEntry = getNumOfEnt(pageToProcess);
+				setNumOfEnt(pageToProcess, numOfEntry + 1);
 
 				//writePage
 				rc = ixfileHandle.fileHandle.writePage(currentNodePage,pageToProcess);//Write Page
 				if(rc != 0)
 					return rc;
+
 				newChildNodeKey = NULL;
 				newChildNodePage = -1;
 			}
@@ -853,9 +856,19 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 
 			//insert(check whether it is same key or not)
 			if(sameKey)
+			{
 				entryToProcess = pageToProcess + entryOffset;//if same, insert in the found entry; if not, insert in the next to the found entry
+			}
 
 			rc = putEntryInLeaf(entryToProcess,attribute.type,key,rid,sameKey);
+
+			if(!sameKey)//
+			{
+				NumOfEnt numOfEntry = getNumOfEnt(pageToProcess);
+				setNumOfEnt(pageToProcess, numOfEntry + 1);
+			}
+
+
 
 			//writePage
 			rc = ixfileHandle.fileHandle.writePage(currentNodePage,pageToProcess);//Write Page
