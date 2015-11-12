@@ -140,6 +140,11 @@ private:
 	RC splitIntermediate(void *interNode, void *newInterNode, void *newRootNode,
 			void *newChildEntry, void *entry, const AttrType entryType, PageNum interNodePN,
 			PageNum newInterNodePN, int offset);
+	void _printBtree(IXFileHandle &ixfileHandle, const Attribute &attribute,
+			PageNum pageNum, void *page, int numOfTabs, bool last);
+	void _printLeafNode(IXFileHandle &ixfileHandle, const Attribute &attribute,
+				PageNum pageNum, void *page, int numOfTabs, bool last);
+	void tab(int numOfTabs);
 };
 
 
