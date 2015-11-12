@@ -1042,7 +1042,7 @@ RC IndexManager::splitIntermediate(void *interNode, void *newInterNode, void *ne
 	setFreeSpaceOffset(interNode,(SlotOffset) firstPartOffset);
 
 
-	if(newRootNode == NULL)
+	if(newRootNode != NULL)
 	{
 		setLeftMostChildPageNum(newRootNode, interNodePN);
 		memcpy(newRootNode, newChildEntry, newChildEntrySize);
@@ -1407,6 +1407,206 @@ RC IndexManager::scan(IXFileHandle &ixfileHandle,
 
 
 void IndexManager::printBtree(IXFileHandle &ixfileHandle, const Attribute &attribute) const {
+
+	char node[PAGE_SIZE];
+	ixfileHandle.fileHandle.readPage(0, node);
+	_printBtree(ixfileHandle, attribute, 0, node, 0, true);
+}
+
+
+void IndexManager::tab(int numOfTabs) const
+{
+	for(int i = 0; i < numOfTabs; i++)
+	{
+		cout << "\t";
+	}
+}
+
+void IndexManager::_printBtree(IXFileHandle &ixfileHandle, const Attribute &attribute,
+		PageNum pageNum, void *page, int numOfTabs, bool last) const
+{
+	tab(numOfTabs);
+	cout << "{";
+	if(pageNum == 0)	cout << endl;
+	cout << "\"keys\":[";
+
+	char *node = (char *)page;
+	int offset = 0;
+	int freeSpaceOffset = getFreeSpaceOffset(node);
+	int entrySize = 0;
+	while(offset != freeSpaceOffset)
+	{
+		entrySize = getSizeOfEntryInIntermediate(node + offset, attribute.type);
+		cout << "\"";
+		if(attribute.type == TypeInt)
+		{
+			int key = 0;
+			getKeyOfEntry(node + offset, key);
+			cout << key;
+		}
+		else if(attribute.type == TypeReal)
+		{
+			float key = 0;
+			getKeyOfEntry(node + offset, key);
+			cout << key;
+		}
+		else
+		{
+			string key;
+			getKeyOfEntry(node + offset, key);
+			cout << key;
+		}
+		cout << "\"";
+		offset += entrySize;
+		if(offset != freeSpaceOffset) cout << ",";
+	}
+
+	cout << "]," << endl;
+	tab(numOfTabs);
+	cout << "\"children\":[" << endl;
+
+	offset = 0;
+	bool lastChild = false;
+	bool leftMostProcessed = false;
+	entrySize = 0;
+	while(offset != freeSpaceOffset || !leftMostProcessed)
+	{
+		int *page;
+		if(!leftMostProcessed)
+		{
+			*page = getLeftMostChildPageNum(node);
+			leftMostProcessed = true;
+		}
+		else
+		{
+			entrySize = getSizeOfEntryInIntermediate(node + offset, attribute.type);
+			page = (int *)(node + offset + entrySize - sizeof(PageNum));
+		}
+
+		char *childNode[PAGE_SIZE];
+		ixfileHandle.fileHandle.readPage(*page, childNode);
+		NodeType nodeType = getNodeType(childNode);
+
+		if((offset + entrySize) == freeSpaceOffset)
+		{
+			lastChild = true;
+		}
+
+		if(nodeType == INTER_NODE)
+		{
+			_printBtree(ixfileHandle, attribute, *page, childNode, numOfTabs + 1, lastChild);
+		}
+		else if(nodeType == LEAF_NODE)
+		{
+			_printLeafNode(ixfileHandle,attribute, *page, childNode, numOfTabs + 1, lastChild);
+		}
+		else
+		{
+			cout << "ERRORRORORORORORROROOROROR" << endl;
+		}
+		offset += entrySize;
+	}
+
+	tab(numOfTabs);
+	cout << "]";
+	if(pageNum == 0)	cout << endl;
+	cout << "}";
+	if(!last) cout << ",";
+	cout << endl;
+}
+
+void IndexManager::_printLeafNode(IXFileHandle &ixfileHandle, const Attribute &attribute,
+		PageNum pageNum, void *page, int numOfTabs, bool last) const
+{
+	tab(numOfTabs);
+	cout << "{";
+	cout << "\"keys\":[";
+
+	char *node = (char *)page;
+	int offset = 0;
+	int freeSpaceOffset = getFreeSpaceOffset(node);
+	int entrySize = 0;
+
+	while(offset != freeSpaceOffset)
+	{
+		entrySize = getSizeOfEntryInLeaf(node + offset, attribute.type);
+		cout << "\"";
+		if(attribute.type == TypeInt)
+		{
+			int key = 0;
+			getKeyOfEntry(node + offset, key);
+			cout << key << ":[";
+			int ridOffset = sizeof(int) + sizeof(NumOfEnt);
+			while(ridOffset != entrySize)
+			{
+				cout << "(";
+				PageNum p = *(PageNum *)(node + offset + ridOffset);
+				SlotOffset s = *(SlotOffset *)(node + offset + ridOffset + sizeof(PageNum));
+				cout << p << "," << s << ")";
+				ridOffset += sizeof(PageNum) + sizeof(SlotOffset);
+				if(ridOffset != entrySize) cout << ",";
+			}
+		}
+		else if(attribute.type == TypeReal)
+		{
+			float key = 0;
+			getKeyOfEntry(node + offset, key);
+			cout << key << ":[";
+			int ridOffset = sizeof(float) + sizeof(NumOfEnt);
+			while(ridOffset != entrySize)
+			{
+				cout << "(";
+				PageNum p = *(PageNum *)(node + offset + ridOffset);
+				SlotOffset s = *(SlotOffset *)(node + offset + ridOffset + sizeof(PageNum));
+				cout << p << "," << s << ")";
+				ridOffset += sizeof(PageNum) + sizeof(SlotOffset);
+				if(ridOffset != entrySize) cout << ",";
+			}
+		}
+		else
+		{
+			string key;
+			getKeyOfEntry(node + offset, key);
+			cout << key << ":[";
+			int ridOffset = key.length() + sizeof(NumOfEnt);
+			while(ridOffset != entrySize)
+			{
+				cout << "(";
+				PageNum p = *(PageNum *)(node + offset + ridOffset);
+				SlotOffset s = *(SlotOffset *)(node + offset + ridOffset + sizeof(PageNum));
+				cout << p << "," << s << ")";
+				ridOffset += sizeof(PageNum) + sizeof(SlotOffset);
+				if(ridOffset != entrySize) cout << ",";
+			}
+		}
+
+		PageNum overflowPageN = getTombstone(node);
+		while(overflowPageN != -1)
+		{
+			cout << ",";
+			char overflowPage[PAGE_SIZE];
+			ixfileHandle.fileHandle.readPage(overflowPageN, overflowPage);
+			int overflowOffset = 0;
+			int oflowFreeSpaceOffs = getFreeSpaceOffset(overflowPage);
+			while(overflowOffset != oflowFreeSpaceOffs)
+			{
+				cout << "(";
+				PageNum p = *(PageNum *)(node + overflowOffset);
+				SlotOffset s = *(SlotOffset *)(node + overflowOffset + sizeof(PageNum));
+				cout << p << "," << s << ")";
+				overflowOffset += sizeof(PageNum) + sizeof(SlotOffset);
+				if(overflowOffset != oflowFreeSpaceOffs) cout << ",";
+			}
+			overflowPageN = getTombstone(overflowPage);
+		}
+		cout << "]";
+		cout << "\"";
+		offset += entrySize;
+		if(offset != freeSpaceOffset) cout << ",";
+	}
+	cout<< "]}";
+	if(!last) cout << ",";
+	cout << endl;
 }
 
 IX_ScanIterator::IX_ScanIterator()
