@@ -1447,10 +1447,21 @@ void IndexManager::_printBtree(IXFileHandle &ixfileHandle, const Attribute &attr
 
 	offset = 0;
 	bool lastChild = false;
-	while(offset != freeSpaceOffset)
+	bool leftMostProcessed = false;
+	entrySize = 0;
+	while(offset != freeSpaceOffset || !leftMostProcessed)
 	{
-		entrySize = getSizeOfEntryInIntermediate(node + offset, attribute.type);
-		int *page = (int *)(node + offset + entrySize - sizeof(PageNum));
+		int *page;
+		if(!leftMostProcessed)
+		{
+			page = getLeftMostChildPageNum(node);
+			leftMostProcessed = true;
+		}
+		else
+		{
+			entrySize = getSizeOfEntryInIntermediate(node + offset, attribute.type);
+			page = (int *)(node + offset + entrySize - sizeof(PageNum));
+		}
 
 		char *childNode[PAGE_SIZE];
 		ixfileHandle.fileHandle.readPage(*page, childNode);
