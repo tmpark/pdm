@@ -101,7 +101,7 @@ public:
 	NumOfEnt getNumOfRIDsInLeaf(const void* entryToProcess, AttrType keyType);
 	RC setNumOfRIDsInLeaf(const void* entryToProcess, AttrType keyType, NumOfEnt numOfRids);
 
-	RC getEntryInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid);
+	RC getRIDInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid);
 	RC setEntryInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid);
 
 	unsigned calNewLeafEntrySize(const void* key, AttrType keyType);
@@ -157,6 +157,17 @@ public:
 
 	// Terminate index scan
 	RC close();
+
+	IndexManager *indexManager;
+	char tempPage[PAGE_SIZE];
+	char tempOverFlowPage[PAGE_SIZE];
+	void entryOffset;
+	FileHandle *fileHandle;
+	const void *until;
+	bool untilInclusive;
+	AttrType keyType;
+	unsigned currentSlot;
+	unsigned currentOverFlowSlot;
 };
 
 

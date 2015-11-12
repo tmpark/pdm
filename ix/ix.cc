@@ -258,7 +258,7 @@ RC IndexManager::setNumOfRIDsInLeaf(const void* entryToProcess, AttrType keyType
 }
 
 
-RC IndexManager::getEntryInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid)
+RC IndexManager::getRIDInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid)
 {
 	char *ridsPtr = NULL;
 	if (keyType == TypeInt)
@@ -448,6 +448,9 @@ bool IndexManager::hasSameKey(const void *key, const void *entryToProcess,  Attr
 
 SlotOffset IndexManager::findEntryOffsetToProcess(void *pageToProcess,AttrType attrType, const void *key)
 {
+	if(key == NULL)
+		return -1;
+
 	unsigned numOfEntry = getNumOfEnt(pageToProcess);
 	NodeType nodeType = getNodeType(pageToProcess);
 
@@ -1325,14 +1328,64 @@ RC IndexManager::scan(IXFileHandle &ixfileHandle,
 		bool        	highKeyInclusive,
 		IX_ScanIterator &ix_ScanIterator)
 {
-	return -1;
+	RC rc = -1;
+	void *pageToProcess = ix_ScanIterator.tempPage;
+	ix_ScanIterator.fileHandle = &ixfileHandle.fileHandle;
+	ix_ScanIterator.until = highKey;
+	ix_ScanIterator.untilInclusive = highKeyInclusive;
+	ix_ScanIterator.keyType = attribute.type;
+
+	//Load root
+	rc = ixfileHandle.fileHandle.readPage(0,pageToProcess);//Read Page
+	if(rc != 0)
+		return rc;
+
+    //finding Leaf Node to process
+	while(getNodeType(pageToProcess) == INTER_NODE)
+	{
+		SlotOffset entryOffset = findEntryOffsetToProcess(pageToProcess,attribute.type,lowKey);
+		PageNum childNode = -1;
+		if(entryOffset == -1)
+			childNode = getLeftMostChildPageNum(pageToProcess);
+		else
+		{
+			char *entryToProcess = pageToProcess + entryOffset;
+			childNode = getChildOfIntermediateEntry(entryToProcess,attribute.type);
+		}
+		rc = ixfileHandle.fileHandle.readPage(childNode,pageToProcess);//Read Page
+		if(rc != 0)
+			return rc;
+	}
+	//After while statement, target leaf is loaded in ix_ScanIterator.tempPage
+
+	SlotOffset entryOffset = findEntryOffsetToProcess(pageToProcess,attribute.type,lowKey);
+
+	//-1 means first position
+	if(entryOffset == -1)
+		entryOffset = 0;
+
+	char *entryToProcess = pageToProcess + entryOffset;
+
+	//Do not allow same key : skip
+	if(hasSameKey(lowKey, entryToProcess,attribute.type) && !lowKeyInclusive)
+	{
+		entryOffset = entryOffset  + getSizeOfEntryInLeaf(entryToProcess,attribute.type);
+	}
+
+	ix_ScanIterator.entryOffset = entryOffset;
+
+	return 0;
 }
+
 
 void IndexManager::printBtree(IXFileHandle &ixfileHandle, const Attribute &attribute) const {
 }
 
 IX_ScanIterator::IX_ScanIterator()
 {
+	indexManager = IndexManager::instance();
+	currentSlot = 0;
+	currentOverFlowSlot = 0;
 }
 
 IX_ScanIterator::~IX_ScanIterator()
@@ -1341,6 +1394,61 @@ IX_ScanIterator::~IX_ScanIterator()
 
 RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 {
+	RC rc = -1;
+	void *pageToProcess = tempPage;
+	SlotOffset freeSpaceOffset = indexManager->getFreeSpaceOffset(pageToProcess);
+
+	//approch to the end of the node: next Node
+	if(entryOffset == freeSpaceOffset)
+	{
+		PageNum nextNodePage = indexManager->getRightSiblingPageNum(pageToProcess);
+
+		//end Of leaf Node
+		if(nextNodePage == -1)
+			return IX_EOF;
+		rc = fileHandle->readPage(nextNodePage,pageToProcess);//Read Page
+		if(rc != 0)
+			return rc;
+		entryOffset = 0;
+	}
+
+
+
+	void *entryToProcess = pageToProcess + entryOffset;
+
+
+	//Extract key value
+	if(keyType == TypeInt)
+	{
+		int value;
+		indexManager->getKeyOfEntry(entryToProcess,value);
+		indexManager->setKeyOfEntry(key,value);
+
+	}
+	else if(keyType == TypeReal)
+	{
+		float value;
+		indexManager->getKeyOfEntry(entryToProcess,value);
+		indexManager->setKeyOfEntry(key,value);
+	}
+	else if(keyType == TypeVarChar)
+	{
+		string value;
+		indexManager->getKeyOfEntry(entryToProcess,value);
+		indexManager->setKeyOfEntry(key,value);
+	}
+
+	//searching for a rid in leaf entry
+    if(currentSlot < indexManager->getNumOfRIDsInLeaf(entryToProcess,keyType))
+    {
+    	indexManager->getRIDInLeaf(entryToProcess, keyType,currentSlot, rid);
+    	currentSlot++;
+    	return 0;
+    }
+
+
+
+
 	return -1;
 }
 
