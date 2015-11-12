@@ -65,57 +65,59 @@ public:
 
 	/*********Pagewide helper fucntions*********/
 
-	SlotOffset getFreeSpaceOffset(const void* pageToProcess);
+	SlotOffset getFreeSpaceOffset(const void* pageToProcess) const;
 	RC setFreeSpaceOffset(void* pageToProcess, SlotOffset freeSpaceOffset);
-	NumOfEnt getNumOfEnt(const void* pageToProcess);
+	NumOfEnt getNumOfEnt(const void* pageToProcess) const;
 	RC setNumOfEnt(void* pageToProcess, NumOfEnt numOfEnt);
-	PageNum getTombstone(const void* pageToProcess);
+	PageNum getTombstone(const void* pageToProcess) const;
 	RC setTombstone(void* pageToProcess, PageNum tombstone);
-	NodeType getNodeType(const void* pageToProcess);
+	NodeType getNodeType(const void* pageToProcess) const;
 	RC setNodeType(void* pageToProcess, NodeType nodeType);
-	PageNum getParentPageNum(const void* pageToProcess);
+	PageNum getParentPageNum(const void* pageToProcess) const;
 	RC setParentPageNum(void* pageToProcess, PageNum parentPageNum);
-	PageNum getLeftSiblingPageNum(const void* pageToProcess);
+	PageNum getLeftSiblingPageNum(const void* pageToProcess) const;
 	RC setLeftSiblingPageNum(void* pageToProcess, PageNum leftSiblingPageNum);
-	PageNum getRightSiblingPageNum(const void* pageToProcess);
+	PageNum getRightSiblingPageNum(const void* pageToProcess) const;
 	RC setRightSiblingPageNum(void* pageToProcess, PageNum rightSiblingPageNum);
-	PageNum getLeftMostChildPageNum(const void* pageToProcess);
+	PageNum getLeftMostChildPageNum(const void* pageToProcess) const;
 	RC setLeftMostChildPageNum(void* pageToProcess, PageNum leftChildPageNum);
-	unsigned getFreeSpaceSize(void* pageToProcess);
-	unsigned getFreeSpaceSizeForOverflowPage(void* pageToProcess);
-
+	unsigned getFreeSpaceSize(void* pageToProcess) const;
+	unsigned getFreeSpaceSizeForOverflowPage(void* pageToProcess) const;
+	RC getRIDInOverFlowPage(const void* pageToProcess, unsigned entryNum, RID &rid) const;
+	RC setRIDInOverFlowPage(const void* pageToProcess, unsigned entryNum, const RID &rid);
 
 	/*******Entrywide helper functions********/
 	template <typename T>
-	RC getKeyOfEntry(const void* entryToProcess, T &value);
-	RC getKeyOfEntry(const void* entryToProcess, string &value);
+	RC getKeyOfEntry(const void* entryToProcess, T &value) const;
+	RC getKeyOfEntry(const void* entryToProcess, string &value) const;
 
 	template <typename T>
 	RC setKeyOfEntry(void* entryToProcess, T value);
 	RC setKeyOfEntry(void* entryToProcess, string value);
 
-	PageNum getChildOfIntermediateEntry(const void* entryToProcess, AttrType keyType);
+	PageNum getChildOfIntermediateEntry(const void* entryToProcess, AttrType keyType) const;
 	RC setChildOfIntermediateEntry(void* entryToProcess, AttrType keyType, PageNum childPageNum);
 
 
-	NumOfEnt getNumOfRIDsInLeaf(const void* entryToProcess, AttrType keyType);
+	NumOfEnt getNumOfRIDsInLeaf(const void* entryToProcess, AttrType keyType) const;
 	RC setNumOfRIDsInLeaf(const void* entryToProcess, AttrType keyType, NumOfEnt numOfRids);
 
-	RC getRIDInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid);
+	RC getRIDInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid) const;
 	RC setRIDInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid);
 
-	unsigned calNewLeafEntrySize(const void* key, AttrType keyType);
-	unsigned calNewInterEntrySize(const void* key, AttrType keyType);
 
-	unsigned getSizeOfEntryInLeaf(const void* entryToProcess, AttrType keyType);
-	unsigned getSizeOfEntryInIntermediate(const void* entryToProcess, AttrType keyType);
+	unsigned calNewLeafEntrySize(const void* key, AttrType keyType) const;
+	unsigned calNewInterEntrySize(const void* key, AttrType keyType) const;
+
+	unsigned getSizeOfEntryInLeaf(const void* entryToProcess, AttrType keyType) const;
+	unsigned getSizeOfEntryInIntermediate(const void* entryToProcess, AttrType keyType) const;
 
 	SlotOffset findEntryOffsetToProcess(void *pageToProcess,AttrType attrType, const void *key);
 
 	string extractVarChar(const void* data);
 	RC pushEntries(void *pageToProcess,SlotOffset from,unsigned amountToMove);
 
-	bool hasSameKey(const void *key, const void *entryToProcess,  AttrType keyType);
+	bool hasSameKey(const void *key, const void *entryToProcess,  AttrType keyType) const;
 
 
 	RC _insertEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid,
@@ -159,15 +161,26 @@ public:
 	RC close();
 
 	IndexManager *indexManager;
-	char tempPage[PAGE_SIZE];
-	char tempOverFlowPage[PAGE_SIZE];
-	void entryOffset;
+
 	FileHandle *fileHandle;
 	const void *until;
 	bool untilInclusive;
 	AttrType keyType;
-	unsigned currentSlot;
-	unsigned currentOverFlowSlot;
+
+	char tempPage[PAGE_SIZE];
+	SlotOffset entryOffset;
+	PageNum tombStone;
+
+	//entry  thing
+	NumOfEnt numOfRids;
+	SlotOffset currentSlot;
+
+	//overflow page things
+	char tempOverFlowPage[PAGE_SIZE];
+	NumOfEnt numOfRidsInOverflow;
+	SlotOffset currentOverFlowSlot;
+	PageNum tombStoneInOverflow;
+
 };
 
 
