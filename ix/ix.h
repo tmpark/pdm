@@ -102,7 +102,7 @@ public:
 	RC setNumOfRIDsInLeaf(const void* entryToProcess, AttrType keyType, NumOfEnt numOfRids);
 
 	RC getRIDInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid);
-	RC setEntryInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid);
+	RC setRIDInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid);
 
 	unsigned calNewLeafEntrySize(const void* key, AttrType keyType);
 	unsigned calNewInterEntrySize(const void* key, AttrType keyType);

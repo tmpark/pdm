@@ -284,7 +284,7 @@ RC IndexManager::getRIDInLeaf(const void* entryToProcess, AttrType keyType, unsi
 }
 
 
-RC IndexManager::setEntryInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid)
+RC IndexManager::setRIDInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid)
 {
 	char *ridsPtr = NULL;
 	PageNum pageNum = rid.pageNum;
@@ -629,7 +629,7 @@ RC IndexManager::putEntryInLeaf(void *entryToProcess, AttrType attrType, const v
 	if(existing)
 	{
 		NumOfEnt numOfEntry = getNumOfRIDsInLeaf(entryToProcess,attrType);
-		setEntryInLeaf(entryToProcess,attrType,numOfEntry,rid);
+		setRIDInLeaf(entryToProcess,attrType,numOfEntry,rid);
 		setNumOfRIDsInLeaf(entryToProcess, attrType,numOfEntry + 1);
 	}
 	else
@@ -637,13 +637,13 @@ RC IndexManager::putEntryInLeaf(void *entryToProcess, AttrType attrType, const v
 		if (attrType == TypeInt)
 		{
 			memcpy(entryToProcess, key, sizeof(int));
-			setEntryInLeaf(entryToProcess,attrType,0,rid);
+			setRIDInLeaf(entryToProcess,attrType,0,rid);
 			setNumOfRIDsInLeaf(entryToProcess,attrType,1);
 		}
 		else if (attrType == TypeReal)
 		{
 			memcpy(entryToProcess, key, sizeof(float));
-			setEntryInLeaf(entryToProcess,attrType,0,rid);
+			setRIDInLeaf(entryToProcess,attrType,0,rid);
 			setNumOfRIDsInLeaf(entryToProcess,attrType,1);
 
 		}
@@ -651,7 +651,7 @@ RC IndexManager::putEntryInLeaf(void *entryToProcess, AttrType attrType, const v
 		{
 			int sizeOfVarChar = *((int*)key);
 			memcpy(entryToProcess, key, sizeof(int) + sizeOfVarChar);
-			setEntryInLeaf(entryToProcess,attrType,0,rid);
+			setRIDInLeaf(entryToProcess,attrType,0,rid);
 			setNumOfRIDsInLeaf(entryToProcess,attrType,1);
 		}
 	}
@@ -1445,7 +1445,6 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
     	currentSlot++;
     	return 0;
     }
-
 
 
 
