@@ -1028,7 +1028,7 @@ RC IndexManager::splitIntermediate(void *interNode, void *newInterNode, void *ne
 	setFreeSpaceOffset(interNode,(SlotOffset) firstPartOffset);
 
 
-	if(newRootNode == NULL)
+	if(newRootNode != NULL)
 	{
 		setLeftMostChildPageNum(newRootNode, interNodePN);
 		memcpy(newRootNode, newChildEntry, newChildEntrySize);
@@ -1605,7 +1605,7 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 	void *pageToProcess = tempPage;
 	SlotOffset freeSpaceOffset = indexManager->getFreeSpaceOffset(pageToProcess);
 
-	//approch to the end of the node: next Node
+	//approach to the end of the node: next Node
 	if(entryOffset == freeSpaceOffset)
 	{
 		PageNum nextNodePage = indexManager->getRightSiblingPageNum(pageToProcess);
