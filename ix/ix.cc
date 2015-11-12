@@ -1340,7 +1340,7 @@ RC IndexManager::scan(IXFileHandle &ixfileHandle,
 	if(rc != 0)
 		return rc;
 
-    //finding Leaf Node to process
+	//finding Leaf Node to process
 	while(getNodeType(pageToProcess) == INTER_NODE)
 	{
 		SlotOffset entryOffset = findEntryOffsetToProcess(pageToProcess,attribute.type,lowKey);
@@ -1423,22 +1423,20 @@ void IndexManager::_printBtree(IXFileHandle &ixfileHandle, const Attribute &attr
 			int key = 0;
 			getKeyOfEntry(node + offset, key);
 			cout << key;
-			cout << "\"";
 		}
 		else if(attribute.type == TypeReal)
 		{
 			float key = 0;
 			getKeyOfEntry(node + offset, key);
 			cout << key;
-			cout << "\"";
 		}
 		else
 		{
 			string key;
 			getKeyOfEntry(node + offset, key);
 			cout << key;
-			cout << "\"";
 		}
+		cout << "\"";
 		offset += entrySize;
 		if(offset != freeSpaceOffset) cout << ",";
 	}
@@ -1512,7 +1510,7 @@ void IndexManager::_printLeafNode(IXFileHandle &ixfileHandle, const Attribute &a
 			{
 				cout << "(";
 				PageNum p = *(PageNum *)(node + offset + ridOffset);
-				SlotOffset s = *(SlotOffset *)(node + offset + ridOffset);
+				SlotOffset s = *(SlotOffset *)(node + offset + ridOffset + sizeof(PageNum));
 				cout << p << "," << s << ")";
 				ridOffset += sizeof(PageNum) + sizeof(SlotOffset);
 				if(ridOffset != entrySize) cout << ",";
@@ -1528,7 +1526,7 @@ void IndexManager::_printLeafNode(IXFileHandle &ixfileHandle, const Attribute &a
 			{
 				cout << "(";
 				PageNum p = *(PageNum *)(node + offset + ridOffset);
-				SlotOffset s = *(SlotOffset *)(node + offset + ridOffset);
+				SlotOffset s = *(SlotOffset *)(node + offset + ridOffset + sizeof(PageNum));
 				cout << p << "," << s << ")";
 				ridOffset += sizeof(PageNum) + sizeof(SlotOffset);
 				if(ridOffset != entrySize) cout << ",";
@@ -1544,11 +1542,31 @@ void IndexManager::_printLeafNode(IXFileHandle &ixfileHandle, const Attribute &a
 			{
 				cout << "(";
 				PageNum p = *(PageNum *)(node + offset + ridOffset);
-				SlotOffset s = *(SlotOffset *)(node + offset + ridOffset);
+				SlotOffset s = *(SlotOffset *)(node + offset + ridOffset + sizeof(PageNum));
 				cout << p << "," << s << ")";
 				ridOffset += sizeof(PageNum) + sizeof(SlotOffset);
 				if(ridOffset != entrySize) cout << ",";
 			}
+		}
+
+		PageNum overflowPageN = getTombstone(node);
+		while(overflowPageN != -1)
+		{
+			cout << ",";
+			char overflowPage[PAGE_SIZE];
+			ixfileHandle.fileHandle.readPage(overflowPageN, overflowPage);
+			int overflowOffset = 0;
+			int oflowFreeSpaceOffs = getFreeSpaceOffset(overflowPage);
+			while(overflowOffset != oflowFreeSpaceOffs)
+			{
+				cout << "(";
+				PageNum p = *(PageNum *)(node + overflowOffset);
+				SlotOffset s = *(SlotOffset *)(node + overflowOffset + sizeof(PageNum));
+				cout << p << "," << s << ")";
+				overflowOffset += sizeof(PageNum) + sizeof(SlotOffset);
+				if(overflowOffset != oflowFreeSpaceOffs) cout << ",";
+			}
+			overflowPageN = getTombstone(overflowPage);
 		}
 		cout << "]";
 		cout << "\"";
@@ -1558,7 +1576,6 @@ void IndexManager::_printLeafNode(IXFileHandle &ixfileHandle, const Attribute &a
 	cout<< "]}";
 	if(!last) cout << ",";
 	cout << endl;
-
 }
 IX_ScanIterator::IX_ScanIterator()
 {
@@ -1618,12 +1635,12 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 	}
 
 	//searching for a rid in leaf entry
-    if(currentSlot < indexManager->getNumOfRIDsInLeaf(entryToProcess,keyType))
-    {
-    	indexManager->getRIDInLeaf(entryToProcess, keyType,currentSlot, rid);
-    	currentSlot++;
-    	return 0;
-    }
+	if(currentSlot < indexManager->getNumOfRIDsInLeaf(entryToProcess,keyType))
+	{
+		indexManager->getRIDInLeaf(entryToProcess, keyType,currentSlot, rid);
+		currentSlot++;
+		return 0;
+	}
 
 
 
