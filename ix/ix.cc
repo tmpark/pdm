@@ -510,7 +510,7 @@ SlotOffset IndexManager::findEntryOffsetToProcess(void *pageToProcess,AttrType a
 		}
 
 
-		if(candidateEntryOffset != currentEntryOffset)
+		if(candidateEntryOffset == currentEntryOffset)
 			return candidateEntryOffset;
 
 
@@ -1080,6 +1080,7 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 	{
 		int value;
 		RC rc = getKeyOfEntry(entryToProcess,value);
+		if(rc != 0) return rc;
 		if(value == *(int *)key)
 		{
 			newEntryNeeded = false;
@@ -1089,6 +1090,7 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 	{
 		float value;
 		RC rc = getKeyOfEntry(entryToProcess,value);
+		if(rc != 0) return rc;
 		if(value == *(float *)key)
 		{
 			newEntryNeeded = false;
@@ -1098,8 +1100,10 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 	{
 		string value;
 		RC rc = getKeyOfEntry(entryToProcess,value);
+		if(rc != 0) return rc;
 		string s;
 		RC rcs = getKeyOfEntry(key,s);
+		if(rcs != 0) return rcs;
 		if(value == s)
 		{
 			newEntryNeeded = false;
@@ -1423,14 +1427,14 @@ void IndexManager::tab(int numOfTabs) const
 }
 
 void IndexManager::_printBtree(IXFileHandle &ixfileHandle, const Attribute &attribute,
-		PageNum pageNum, void *page, int numOfTabs, bool last) const
+		PageNum pageNum, void *page1, int numOfTabs, bool last) const
 {
 	tab(numOfTabs);
 	cout << "{";
 	if(pageNum == 0)	cout << endl;
 	cout << "\"keys\":[";
 
-	char *node = (char *)page;
+	char *node = (char *)page1;
 	int offset = 0;
 	int freeSpaceOffset = getFreeSpaceOffset(node);
 	int entrySize = 0;
@@ -1472,9 +1476,11 @@ void IndexManager::_printBtree(IXFileHandle &ixfileHandle, const Attribute &attr
 	while(offset != freeSpaceOffset || !leftMostProcessed)
 	{
 		int *page;
+		int lmcpn = 0;
 		if(!leftMostProcessed)
 		{
-			*page = getLeftMostChildPageNum(node);
+			lmcpn = getLeftMostChildPageNum(node);
+			page = &lmcpn;
 			leftMostProcessed = true;
 		}
 		else
