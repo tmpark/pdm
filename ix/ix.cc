@@ -630,7 +630,6 @@ RC IndexManager::createFile(const string &fileName)
 	if(success != 0)
 		return success;
 
-	char tempPage[PAGE_SIZE];
 
 	//Root Page
 	setFreeSpaceOffset(tempPage, 0);
@@ -739,10 +738,11 @@ RC IndexManager::putEntryInLeaf(void *entryToProcess, AttrType attrType, const v
 
 }
 
-RC IndexManager::insertEntryInOverflowPage(IXFileHandle &ixfileHandle,void *pageToProcess,const RID &rid)
+RC IndexManager::insertEntryInOverflowPage(IXFileHandle &ixfileHandle,PageNum currentNodePage,void *pageToProcess,const RID &rid)
 {
 	RC rc = -1;
 	PageNum tombstone = getTombstone(pageToProcess);
+	NodeType nodeType = getNodeType(pageToProcess);
 
 	//go to another overflow page
 	if(tombstone != -1)
@@ -752,13 +752,18 @@ RC IndexManager::insertEntryInOverflowPage(IXFileHandle &ixfileHandle,void *page
 		rc = ixfileHandle.fileHandle.readPage(tombstone,overFlowPageToProcess);//Read Page
 		if(rc != 0)
 			return rc;
-		insertEntryInOverflowPage(ixfileHandle,overFlowPageToProcess,rid);
+		insertEntryInOverflowPage(ixfileHandle,tombstone,overFlowPageToProcess,rid);
 	}
 	//insert here
 	else
 	{
 		unsigned entrySize = sizeof(PageNum) + sizeof(SlotOffset);
-		unsigned freeSpace = getFreeSpaceSizeForOverflowPage(pageToProcess);
+		unsigned freeSpace = 0;
+		if(nodeType == OVER_NODE)
+    		freeSpace = getFreeSpaceSizeForOverflowPage(pageToProcess);
+		else if(nodeType == LEAF_NODE)
+			freeSpace = getFreeSpaceSize(pageToProcess);
+
 		if(freeSpace >= entrySize)
 		{
 			unsigned numOfEnt = getNumOfEnt(pageToProcess);
@@ -766,6 +771,7 @@ RC IndexManager::insertEntryInOverflowPage(IXFileHandle &ixfileHandle,void *page
 			setRIDInOverFlowPage(pageToProcess,numOfEnt,rid);
 			setFreeSpaceOffset(pageToProcess,freeSpaceOffset + entrySize);
 			setNumOfEnt(pageToProcess,numOfEnt + 1);
+
 		}
 		//New Overflow Page
 		else
@@ -775,15 +781,18 @@ RC IndexManager::insertEntryInOverflowPage(IXFileHandle &ixfileHandle,void *page
 			setFreeSpaceOffset(overFlowPageToProcess,0);
 			setNumOfEnt(overFlowPageToProcess, 0);
 			setTombstone(overFlowPageToProcess,-1);
-
-			rc = insertEntryInOverflowPage(ixfileHandle, overFlowPageToProcess, rid);
-
+			setNodeType(overFlowPageToProcess,OVER_NODE);
 			PageNum anotherOverFlowPage = ixfileHandle.fileHandle.getNumberOfPages();
 			rc = ixfileHandle.fileHandle.appendPage(overFlowPageToProcess);
 			if(rc != 0)
 				return rc;
+			rc = insertEntryInOverflowPage(ixfileHandle,anotherOverFlowPage,overFlowPageToProcess, rid);
 			rc =setTombstone(pageToProcess,anotherOverFlowPage);
 		}
+		//writePage to update tombstone
+		rc = ixfileHandle.fileHandle.writePage(currentNodePage,pageToProcess);//Write Page
+		if(rc != 0)
+			return rc;
 
 	}
 	return 0;
@@ -886,37 +895,42 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 	}
 	else if(nodeType == LEAF_NODE)
 	{
+		char *ptrToInsert = NULL;
 		SlotOffset offsetToInsert = 0;
+		SlotOffset offsetToPush = 0;
+		bool sameKey = false;
 
 		//-1 means first position
 		if(entryOffset == -1)
+		{
 			offsetToInsert = 0;
-		//position to insert should be next to the found entry
+			offsetToPush = 0;
+		}
 		else
 		{
-			char *entryTemp = pageToProcess + entryOffset;
-			offsetToInsert = entryOffset + getSizeOfEntryInLeaf(entryTemp,attribute.type);
+			entryToProcess = pageToProcess + entryOffset;
+			sameKey = compareKeys(key,EQ_OP,entryToProcess,attribute.type);
+			if(sameKey)
+			    offsetToInsert = entryOffset;
+			else
+				offsetToInsert = entryOffset + getSizeOfEntryInLeaf(entryToProcess,attribute.type);
+			offsetToPush = entryOffset + getSizeOfEntryInLeaf(entryToProcess,attribute.type);
 		}
 
-		entryToProcess = pageToProcess + offsetToInsert;
-
+		ptrToInsert = pageToProcess + offsetToInsert;
 
 		PageNum tombstone = getTombstone(pageToProcess);
 
 		//Overflowed Node: go inside overflow page and return null
 		if(tombstone != -1)
 		{
-			rc = insertEntryInOverflowPage(ixfileHandle,pageToProcess,rid);
+			rc = insertEntryInOverflowPage(ixfileHandle,currentNodePage,pageToProcess,rid);
 			newChildNodeKey = NULL;
 			newChildNodePage = -1;
 			return 0;
 		}
 
 		unsigned freeSpaceSize = getFreeSpaceSize(pageToProcess);
-
-		bool sameKey = false;
-		if(entryOffset != -1) //-1 means not found in the first place -> not same key
-			sameKey = compareKeys(key,EQ_OP,entryToProcess,attribute.type);
 
 		unsigned entrySize = 0;
 
@@ -931,17 +945,10 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 		{
 
 			//push as much as entrySize (Push check whether there needs push)
-			rc = pushEntries(pageToProcess,offsetToInsert,entrySize);
+			rc = pushEntries(pageToProcess,offsetToPush,entrySize);
+			rc = putEntryInLeaf(ptrToInsert,attribute.type,key,rid,sameKey);
 
-			//insert(check whether it is same key or not)
-			if(sameKey)
-			{
-				entryToProcess = pageToProcess + entryOffset;//if same, insert in the found entry; if not, insert in the next to the found entry
-			}
-
-			rc = putEntryInLeaf(entryToProcess,attribute.type,key,rid,sameKey);
-
-			if(!sameKey)//
+			if(!sameKey)//slot increases
 			{
 				NumOfEnt numOfEntry = getNumOfEnt(pageToProcess);
 				setNumOfEnt(pageToProcess, numOfEntry + 1);
@@ -961,7 +968,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 		//Same key insertion and num of entry == 1 and no space means it requires overflow page.
 		else if(sameKey && (getNumOfEnt(pageToProcess) == 1))
 		{
-			rc = insertEntryInOverflowPage(ixfileHandle, pageToProcess, rid);
+			rc = insertEntryInOverflowPage(ixfileHandle,currentNodePage, pageToProcess, rid);
 			newChildNodeKey = NULL;
 			newChildNodePage = -1;
 		}
@@ -1405,7 +1412,10 @@ RC IndexManager::scan(IXFileHandle &ixfileHandle,
 		IX_ScanIterator &ix_ScanIterator)
 {
 	RC rc = -1;
-	void *pageToProcess = ix_ScanIterator.tempPage;
+
+	void *pageToProcess = tempPage;
+	ix_ScanIterator.tempPage = tempPage;
+	ix_ScanIterator.tempOverFlowPage = tempOverFlowPage;
 	ix_ScanIterator.fileHandle = &ixfileHandle.fileHandle;
 	ix_ScanIterator.until = highKey;
 	if(highKeyInclusive)
@@ -1453,7 +1463,7 @@ RC IndexManager::scan(IXFileHandle &ixfileHandle,
 	if(ix_ScanIterator.tombStone != -1)
 	{
 		//Load Overflow Page
-		void *overflowPage = ix_ScanIterator.tempOverFlowPage;
+		void *overflowPage = tempOverFlowPage;
 		rc = ixfileHandle.fileHandle.readPage(ix_ScanIterator.tombStone,overflowPage);//Read Page
 		if(rc != 0)
 			return rc;
@@ -1692,6 +1702,8 @@ IX_ScanIterator::IX_ScanIterator()
 	keyType = TypeInt;
 	until = NULL;
 	currentOverFlowSlot = 0;
+	tempPage = NULL;
+	tempOverFlowPage = NULL;
 }
 
 IX_ScanIterator::~IX_ScanIterator()

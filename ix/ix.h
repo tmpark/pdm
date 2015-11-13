@@ -17,11 +17,12 @@ typedef unsigned short NumOfEnt;
 #define ROOT_NODE 'R'
 #define INTER_NODE 'I'
 #define LEAF_NODE 'L'
+#define OVER_NODE 'O'
 
 
 //freespace, number of entries, tombstone, node type, parent page num, left sibling page num, right sibling page num, left child page num
 #define PAGE_DIC_SIZE (sizeof(SlotOffset) + sizeof(NumOfEnt) + sizeof(PageNum) + sizeof(NodeType) + sizeof(PageNum) + sizeof(PageNum) + sizeof(PageNum) + sizeof(PageNum))
-#define OVERFLOW_PAGE_DIC_SIZE (sizeof(SlotOffset) + sizeof(NumOfEnt) + sizeof(PageNum))
+#define OVERFLOW_PAGE_DIC_SIZE (sizeof(SlotOffset) + sizeof(NumOfEnt) + sizeof(PageNum) + sizeof(NodeType))
 #define WHOLE_SIZE_FOR_ENTRIES (PAGE_SIZE - PAGE_DIC_SIZE)
 
 
@@ -127,8 +128,11 @@ public:
 	RC putEntryInLeaf(void *entryToProcess, AttrType attrType, const void *key, RID rid, bool existing);
 
 
-	RC insertEntryInOverflowPage(IXFileHandle &ixfileHandle, void *overFlowPageToProcess, const RID &rid);
+	RC insertEntryInOverflowPage(IXFileHandle &ixfileHandle,PageNum currentNodePage,void *pageToProcess,const RID &rid);
 
+
+	char tempPage[PAGE_SIZE];
+	char tempOverFlowPage[PAGE_SIZE];
 
 protected:
 	IndexManager();
@@ -175,7 +179,7 @@ public:
 
 	AttrType keyType;
 
-	char tempPage[PAGE_SIZE];
+	void *tempPage;
 	SlotOffset entryOffset;
 	PageNum tombStone;
 
@@ -183,7 +187,7 @@ public:
 	SlotOffset currentSlot;
 
 	//overflow page things
-	char tempOverFlowPage[PAGE_SIZE];
+	void *tempOverFlowPage;
 	NumOfEnt numOfRidsInOverflow;
 	SlotOffset currentOverFlowSlot;
 	PageNum tombStoneInOverflow;
