@@ -465,6 +465,9 @@ unsigned IndexManager::getSizeOfEntryInIntermediate(const void* entryToProcess, 
 
 bool IndexManager::compareKeys(const void *key1,CompOp op, const void *key2,  AttrType keyType) const
 {
+	if(key1 == NULL || key2 == NULL)
+		return false;
+
 	if (keyType == TypeInt)
 	{
 		int value1;
@@ -1449,6 +1452,7 @@ RC IndexManager::scan(IXFileHandle &ixfileHandle,
 
 	SlotOffset entryOffset = findEntryOffsetToProcess(pageToProcess,attribute.type,lowKey);
 
+
 	//-1 means first position
 	if(entryOffset == -1)
 		entryOffset = 0;
@@ -1473,11 +1477,13 @@ RC IndexManager::scan(IXFileHandle &ixfileHandle,
 	}
 
 	//Do not allow same key : skip
-	if(compareKeys(lowKey,EQ_OP, entryToProcess,attribute.type) && !lowKeyInclusive)
+	if(lowKey != NULL && compareKeys(lowKey,EQ_OP, entryToProcess,attribute.type) && !lowKeyInclusive)
 	{
 		entryOffset = entryOffset  + getSizeOfEntryInLeaf(entryToProcess,attribute.type);
 		ix_ScanIterator.tombStone = -1;//Also skip the overflow Page for this key
 	}
+
+	//cout << getFreeSpaceOffset(ix_ScanIterator.tempPage) << endl << flush;
 
 
 	return 0;
@@ -1741,6 +1747,7 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 	RC rc = -1;
 	void *pageToProcess = tempPage;
 	void *overflowPageToProcess = tempOverFlowPage;
+
 	SlotOffset freeSpaceOffset = indexManager->getFreeSpaceOffset(pageToProcess);
 	void *entryToProcess = (char*)pageToProcess + entryOffset;
 
@@ -1806,7 +1813,20 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 
 RC IX_ScanIterator::close()
 {
-	return -1;
+	indexManager = NULL;
+	op = EQ_OP;
+	currentSlot = 0;
+	fileHandle = NULL;
+	tombStone = -1;
+	entryOffset = 0;
+	tombStoneInOverflow = -1;
+	numOfRidsInOverflow = 0;
+	keyType = TypeInt;
+	until = NULL;
+	currentOverFlowSlot = 0;
+	tempPage = NULL;
+	tempOverFlowPage = NULL;
+	return 0;
 }
 
 
