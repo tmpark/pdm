@@ -594,13 +594,17 @@ string IndexManager::extractVarChar(const void* data)
 	return string(varChar,sizeOfVarChar);
 }
 
-RC IndexManager::pushEntries(void *pageToProcess,SlotOffset from,unsigned amountToMove)
+RC IndexManager::moveEntries(void *pageToProcess,SlotOffset from,unsigned amountToMove, MoveDirection direction)
 {
 	unsigned freeSpaceOffset = getFreeSpaceOffset(pageToProcess);
 	unsigned amountOfData = freeSpaceOffset - from;
 	char buf[amountOfData];
 	memcpy(buf,(char*)pageToProcess+from,amountOfData);
-	memcpy((char*)pageToProcess+from+amountToMove,buf,amountOfData);
+	if(direction == MoveForward)
+    	memcpy((char*)pageToProcess+from+amountToMove,buf,amountOfData);
+	else if(direction == MoveBackward)
+		memcpy((char*)pageToProcess+from-amountToMove,buf,amountOfData);
+
 	setFreeSpaceOffset(pageToProcess,freeSpaceOffset + amountToMove);
 	return 0;
 }
@@ -861,7 +865,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 					offsetToInsert = entryOffset + getSizeOfEntryInLeaf(entryTemp,attribute.type);
 				}
 				//push as much as entrySize
-				rc = pushEntries(pageToProcess,offsetToInsert,entrySize);
+				rc = moveEntries(pageToProcess,offsetToInsert,entrySize,MoveForward);
 				//insert
 				char *newEntryPtr = (char*)pageToProcess + offsetToInsert;
 				rc = putEntryInItermediate(newEntryPtr,attribute.type,newChildNodeKey,newChildNodePage);
@@ -880,11 +884,21 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 			else
 			{
 				char newChildPageToProcess[PAGE_SIZE];
+				newChildNodePage = ixfileHandle.fileHandle.getNumberOfPages();
 
 				//split(get child node key)
+				/*
+				if(CurrentNodePage == 0)
+				{
+					char newRootPageToProcess[PAGE_SIZE];
+					splitIntermediate(pageToProcess, newChildPageToProcess, newRootPageToProcess,
+											newChildNodeKey, void *entry, const AttrType entryType, currentNodePage,
+											newChildNodePage, offsetToInsert);
+				}
+				else
+*/
 
 
-				newChildNodePage = ixfileHandle.fileHandle.getNumberOfPages();
 				//WritePage(Current & newPage)
 				rc = ixfileHandle.fileHandle.writePage(currentNodePage,pageToProcess);//Write Page
 				if(rc != 0)
@@ -948,7 +962,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 		{
 
 			//push as much as entrySize (Push check whether there needs push)
-			rc = pushEntries(pageToProcess,offsetToPush,entrySize);
+			rc = moveEntries(pageToProcess,offsetToPush,entrySize,MoveForward);
 			rc = putEntryInLeaf(ptrToInsert,attribute.type,key,rid,sameKey);
 
 			if(!sameKey)//slot increases
@@ -979,15 +993,17 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 		else
 		{
 			char newChildPageToProcess[PAGE_SIZE];
+			newChildNodePage = ixfileHandle.fileHandle.getNumberOfPages();
 
 			//splitLeaf(get child node key)
+			splitLeaf(pageToProcess, newChildPageToProcess, newChildNodeKey,
+					currentNodePage, newChildNodePage,offsetToPush, attribute, key, rid);
 
-
-			newChildNodePage = ixfileHandle.fileHandle.getNumberOfPages();
 			//WritePage(Current & newPage)
 			rc = ixfileHandle.fileHandle.writePage(currentNodePage,pageToProcess);//Write Page
 			if(rc != 0)
 				return rc;
+
 			rc = ixfileHandle.fileHandle.appendPage(newChildPageToProcess);
 			if(rc != 0)
 				return rc;
@@ -1001,7 +1017,7 @@ RC IndexManager::insertEntry(IXFileHandle &ixfileHandle, const Attribute &attrib
 {
 
 	RC rc;
-	void *newChildNodeKey = NULL;
+	char newChildNodeKey[PAGE_SIZE];
 	PageNum newChildNodePage = -1;
 
 	rc = _insertEntry(ixfileHandle,attribute,key,rid,0,newChildNodeKey,newChildNodePage);
@@ -1400,9 +1416,178 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 	return 0;
 }
 
+
+RC IndexManager::_deleteEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid,
+		PageNum currentNodePage, void *newChildNodeKey, PageNum &newChildNodePage)
+{
+	RC rc = -1;
+	newChildNodeKey = NULL;
+	newChildNodePage = -1;
+	char pageToProcess[PAGE_SIZE];
+
+	//it is changed when new child node is created in its child
+	rc = ixfileHandle.fileHandle.readPage(currentNodePage,pageToProcess);//Read Page
+	if(rc != 0)
+		return rc;
+
+	NodeType nodeType = getNodeType(pageToProcess);
+	SlotOffset entryOffset = findEntryOffsetToProcess(pageToProcess,attribute.type,key);
+
+	char *entryToProcess = NULL;
+
+
+	if (nodeType == INTER_NODE)
+	{
+
+		PageNum childNodePage = -1;
+		//left most child pointer
+		if(entryOffset == -1)
+			childNodePage = getLeftMostChildPageNum(pageToProcess);
+		else //general entry to point child
+		{
+			entryToProcess = pageToProcess + entryOffset;
+			childNodePage = getChildOfIntermediateEntry(entryToProcess,attribute.type);
+		}
+
+		rc = _deleteEntry(ixfileHandle,attribute,key,rid,
+				childNodePage,newChildNodeKey,newChildNodePage);
+
+		if(newChildNodePage == -1)
+		{
+			newChildNodeKey = NULL;
+			newChildNodePage = -1;
+		}
+		else //there was merge
+		{
+		}
+	}
+	else if(nodeType == LEAF_NODE)
+	{
+		char *ptrToDelete = NULL;
+		SlotOffset offsetToDelete = 0;
+		SlotOffset offsetToCompact = 0;
+		bool sameKey = false;
+
+		/*****************************************key matching*************************************/
+		//-1 means first position
+		if(entryOffset == -1)
+			//No key to match
+			return -1;
+
+		entryToProcess = pageToProcess + entryOffset;
+		sameKey = compareKeys(key,EQ_OP,entryToProcess,attribute.type);
+
+		if(!sameKey)
+			//No key to match
+			return -1;
+
+		offsetToDelete = entryOffset;
+		/****************************************rid Matching*************************************/
+
+		for (unsigned i = 1 ; i < getNumOfRIDsInLeaf(entryToProcess,attribute.type) ; i++)
+		{
+
+		}
+
+
+
+
+
+		//offsetToCompact = entryOffset + getSizeOfEntryInLeaf(entryToProcess,attribute.type);
+
+		ptrToDelete = pageToProcess + offsetToDelete;
+
+		PageNum tombstone = getTombstone(pageToProcess);
+
+		//Rid Scan
+
+
+		//Overflowed Node: go inside overflow page and return null
+		if(tombstone != -1)
+		{
+			rc = insertEntryInOverflowPage(ixfileHandle,currentNodePage,pageToProcess,rid);
+			newChildNodeKey = NULL;
+			newChildNodePage = -1;
+			return 0;
+		}
+
+		unsigned freeSpaceSize = getFreeSpaceSize(pageToProcess);
+
+		unsigned entrySize = 0;
+
+		//Entry size is different in terms of new or not
+		if(sameKey)
+			entrySize = sizeof(PageNum) + sizeof(SlotOffset);
+		else
+			entrySize = calNewLeafEntrySize(key, attribute.type);
+
+
+		if(freeSpaceSize >= entrySize)
+		{
+
+			//push as much as entrySize (Push check whether there needs push)
+			rc = pushEntries(pageToProcess,offsetToCompact,entrySize);
+			rc = putEntryInLeaf(ptrToDelete,attribute.type,key,rid,sameKey);
+
+			if(!sameKey)//slot increases
+			{
+				NumOfEnt numOfEntry = getNumOfEnt(pageToProcess);
+				setNumOfEnt(pageToProcess, numOfEntry + 1);
+			}
+
+
+
+			//writePage
+			rc = ixfileHandle.fileHandle.writePage(currentNodePage,pageToProcess);//Write Page
+			if(rc != 0)
+				return rc;
+
+			newChildNodeKey = NULL;
+			newChildNodePage = -1;
+
+		}
+		//Same key insertion and num of entry == 1 and no space means it requires overflow page.
+		else if(sameKey && (getNumOfEnt(pageToProcess) == 1))
+		{
+			rc = insertEntryInOverflowPage(ixfileHandle,currentNodePage, pageToProcess, rid);
+			newChildNodeKey = NULL;
+			newChildNodePage = -1;
+		}
+		//split
+		else
+		{
+			char newChildPageToProcess[PAGE_SIZE];
+			newChildNodePage = ixfileHandle.fileHandle.getNumberOfPages();
+
+			//splitLeaf(get child node key)
+			splitLeaf(pageToProcess, newChildPageToProcess, newChildNodeKey,
+					currentNodePage, newChildNodePage,offsetToCompact, attribute, key, rid);
+
+			//WritePage(Current & newPage)
+			rc = ixfileHandle.fileHandle.writePage(currentNodePage,pageToProcess);//Write Page
+			if(rc != 0)
+				return rc;
+
+			rc = ixfileHandle.fileHandle.appendPage(newChildPageToProcess);
+			if(rc != 0)
+				return rc;
+		}
+	}
+
+	return 0;
+}
+
+
+
 RC IndexManager::deleteEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid)
 {
-	return -1;
+	RC rc;
+	char newChildNodeKey[PAGE_SIZE];
+	PageNum newChildNodePage = -1;
+
+	rc = _deleteEntry(ixfileHandle,attribute,key,rid,0,newChildNodeKey,newChildNodePage);
+
+	return rc;
 }
 
 

@@ -19,6 +19,8 @@ typedef unsigned short NumOfEnt;
 #define LEAF_NODE 'L'
 #define OVER_NODE 'O'
 
+typedef enum { MoveForward = 0, MoveBackward} MoveDirection;
+
 
 //freespace, number of entries, tombstone, node type, parent page num, left sibling page num, right sibling page num, left child page num
 #define PAGE_DIC_SIZE (sizeof(SlotOffset) + sizeof(NumOfEnt) + sizeof(PageNum) + sizeof(NodeType) + sizeof(PageNum) + sizeof(PageNum) + sizeof(PageNum) + sizeof(PageNum))
@@ -118,10 +120,13 @@ public:
 	SlotOffset findEntryOffsetToProcess(void *pageToProcess,AttrType attrType, const void *key);
 
 	string extractVarChar(const void* data);
-	RC pushEntries(void *pageToProcess,SlotOffset from,unsigned amountToMove);
+	RC moveEntries(void *pageToProcess,SlotOffset from,unsigned amountToMove, MoveDirection direction);
 
 	bool compareKeys(const void *key,CompOp op, const void *entryToProcess,  AttrType keyType) const;
 
+
+	RC _deleteEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid,
+			PageNum currentNodePage, void *newChildNodeKey, PageNum &newChildNodePage);
 	RC _insertEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid,
 			PageNum currentNodePage, void *newChildNodeKey, PageNum &newChildNodePage);
 	RC putEntryInItermediate(void *entryToProcess, AttrType attrType, const void *key, PageNum pageNum);
