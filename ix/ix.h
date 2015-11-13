@@ -95,6 +95,8 @@ public:
 	RC setKeyOfEntry(void* entryToProcess, T value);
 	RC setKeyOfEntry(void* entryToProcess, string value);
 
+	RC copyKeyOfEntry(void *to, void *from, AttrType keyType);
+
 	PageNum getChildOfIntermediateEntry(const void* entryToProcess, AttrType keyType) const;
 	RC setChildOfIntermediateEntry(void* entryToProcess, AttrType keyType, PageNum childPageNum);
 
@@ -117,8 +119,7 @@ public:
 	string extractVarChar(const void* data);
 	RC pushEntries(void *pageToProcess,SlotOffset from,unsigned amountToMove);
 
-	bool hasSameKey(const void *key, const void *entryToProcess,  AttrType keyType) const;
-
+	bool compareKeys(const void *key,CompOp op, const void *entryToProcess,  AttrType keyType) const;
 
 	RC _insertEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid,
 			PageNum currentNodePage, void *newChildNodeKey, PageNum &newChildNodePage);
@@ -151,16 +152,17 @@ private:
 
 
 class IX_ScanIterator {
+
 public:
 
 	// Constructor
 	IX_ScanIterator();
-
 	// Destructor
 	~IX_ScanIterator();
 
 	// Get next matching entry
 	RC getNextEntry(RID &rid, void *key);
+	RC _getNextEntryFromOverflow(void *pageToProcess, RID &rid);
 
 	// Terminate index scan
 	RC close();
@@ -169,7 +171,8 @@ public:
 
 	FileHandle *fileHandle;
 	const void *until;
-	bool untilInclusive;
+	CompOp op;
+
 	AttrType keyType;
 
 	char tempPage[PAGE_SIZE];
@@ -177,7 +180,6 @@ public:
 	PageNum tombStone;
 
 	//entry  thing
-	NumOfEnt numOfRids;
 	SlotOffset currentSlot;
 
 	//overflow page things

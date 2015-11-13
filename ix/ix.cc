@@ -174,6 +174,31 @@ RC IndexManager::setKeyOfEntry(void* entryToProcess, string value)
 	return 0;
 }
 
+RC IndexManager::copyKeyOfEntry(void *to, void *from, AttrType keyType)
+{
+	//Extract key value
+	if(keyType == TypeInt)
+	{
+		int value;
+		getKeyOfEntry(from,value);
+		setKeyOfEntry(to,value);
+
+	}
+	else if(keyType == TypeReal)
+	{
+		float value;
+		getKeyOfEntry(from,value);
+		setKeyOfEntry(to,value);
+	}
+	else if(keyType == TypeVarChar)
+	{
+		string value;
+		getKeyOfEntry(from,value);
+		setKeyOfEntry(to,value);
+	}
+}
+
+
 PageNum IndexManager::getChildOfIntermediateEntry(const void* entryToProcess, AttrType keyType) const
 {
 	char *childPtr = NULL;
@@ -438,31 +463,64 @@ unsigned IndexManager::getSizeOfEntryInIntermediate(const void* entryToProcess, 
 	return entrySize;
 }
 
-bool IndexManager::hasSameKey(const void *key, const void *entryToProcess,  AttrType keyType) const
+bool IndexManager::compareKeys(const void *key1,CompOp op, const void *key2,  AttrType keyType) const
 {
 	if (keyType == TypeInt)
 	{
 		int value1;
 		int value2;
-		getKeyOfEntry(key,value1);
-		getKeyOfEntry(entryToProcess,value2);
-		return (value1 == value2);
+		getKeyOfEntry(key1,value1);
+		getKeyOfEntry(key2,value2);
+		if(op == EQ_OP)
+			return (value1 == value2);
+		if(op == LT_OP)
+					return (value1 < value2);
+		if(op == LE_OP)
+					return (value1 <= value2);
+		if(op == GT_OP)
+					return (value1 > value2);
+		if(op == GE_OP)
+					return (value1 >= value2);
+		if(op == NE_OP)
+					return (value1 != value2);
 	}
 	else if (keyType == TypeReal)
 	{
 		float value1;
 		float value2;
-		getKeyOfEntry(key,value1);
-		getKeyOfEntry(entryToProcess,value2);
-		return (value1 == value2);
+		getKeyOfEntry(key1,value1);
+		getKeyOfEntry(key2,value2);
+		if(op == EQ_OP)
+			return (value1 == value2);
+		if(op == LT_OP)
+					return (value1 < value2);
+		if(op == LE_OP)
+					return (value1 <= value2);
+		if(op == GT_OP)
+					return (value1 > value2);
+		if(op == GE_OP)
+					return (value1 >= value2);
+		if(op == NE_OP)
+					return (value1 != value2);
 	}
 	else if (keyType == TypeVarChar)
 	{
 		string value1;
 		string value2;
-		getKeyOfEntry(key,value1);
-		getKeyOfEntry(entryToProcess,value2);
-		return (value1 == value2);
+		getKeyOfEntry(key1,value1);
+		getKeyOfEntry(key2,value2);
+		if(op == EQ_OP)
+			return (value1 == value2);
+		if(op == LT_OP)
+					return (value1 < value2);
+		if(op == LE_OP)
+					return (value1 <= value2);
+		if(op == GT_OP)
+					return (value1 > value2);
+		if(op == GE_OP)
+					return (value1 >= value2);
+		if(op == NE_OP)
+					return (value1 != value2);
 	}
 	return false;
 }
@@ -855,7 +913,11 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 		}
 
 		unsigned freeSpaceSize = getFreeSpaceSize(pageToProcess);
-		bool sameKey = hasSameKey(key,entryToProcess,attribute.type);
+
+		bool sameKey = false;
+		if(entryOffset != -1) //-1 means not found in the first place -> not same key
+			sameKey = compareKeys(key,EQ_OP,entryToProcess,attribute.type);
+
 		unsigned entrySize = 0;
 
 		//Entry size is different in terms of new or not
@@ -1346,7 +1408,10 @@ RC IndexManager::scan(IXFileHandle &ixfileHandle,
 	void *pageToProcess = ix_ScanIterator.tempPage;
 	ix_ScanIterator.fileHandle = &ixfileHandle.fileHandle;
 	ix_ScanIterator.until = highKey;
-	ix_ScanIterator.untilInclusive = highKeyInclusive;
+	if(highKeyInclusive)
+		ix_ScanIterator.op = LE_OP;
+	else
+		ix_ScanIterator.op = LT_OP;
 	ix_ScanIterator.keyType = attribute.type;
 
 	//Load root
@@ -1380,13 +1445,8 @@ RC IndexManager::scan(IXFileHandle &ixfileHandle,
 
 	char *entryToProcess = (char*)pageToProcess + entryOffset;
 
-	//Do not allow same key : skip
-	if(hasSameKey(lowKey, entryToProcess,attribute.type) && !lowKeyInclusive)
-	{
-		entryOffset = entryOffset  + getSizeOfEntryInLeaf(entryToProcess,attribute.type);
-	}
-
 	ix_ScanIterator.entryOffset = entryOffset;
+	ix_ScanIterator.currentSlot = 0;
 	ix_ScanIterator.tombStone = getTombstone(pageToProcess);
 
 
@@ -1401,6 +1461,14 @@ RC IndexManager::scan(IXFileHandle &ixfileHandle,
 		ix_ScanIterator.currentOverFlowSlot = 0;
 		ix_ScanIterator.tombStoneInOverflow = getTombstone(overflowPage);
 	}
+
+	//Do not allow same key : skip
+	if(compareKeys(lowKey,EQ_OP, entryToProcess,attribute.type) && !lowKeyInclusive)
+	{
+		entryOffset = entryOffset  + getSizeOfEntryInLeaf(entryToProcess,attribute.type);
+		ix_ScanIterator.tombStone = -1;//Also skip the overflow Page for this key
+	}
+
 
 	return 0;
 }
@@ -1423,14 +1491,14 @@ void IndexManager::tab(int numOfTabs) const
 }
 
 void IndexManager::_printBtree(IXFileHandle &ixfileHandle, const Attribute &attribute,
-		PageNum pageNum, void *page, int numOfTabs, bool last) const
+		PageNum pageNum, void *page1, int numOfTabs, bool last) const
 {
 	tab(numOfTabs);
 	cout << "{";
 	if(pageNum == 0)	cout << endl;
 	cout << "\"keys\":[";
 
-	char *node = (char *)page;
+	char *node = (char *)page1;
 	int offset = 0;
 	int freeSpaceOffset = getFreeSpaceOffset(node);
 	int entrySize = 0;
@@ -1472,9 +1540,11 @@ void IndexManager::_printBtree(IXFileHandle &ixfileHandle, const Attribute &attr
 	while(offset != freeSpaceOffset || !leftMostProcessed)
 	{
 		int *page;
+		int lmcp = 0;
 		if(!leftMostProcessed)
 		{
-			*page = getLeftMostChildPageNum(node);
+			lmcp = getLeftMostChildPageNum(node);
+			page = &lmcp;
 			leftMostProcessed = true;
 		}
 		else
@@ -1612,13 +1682,46 @@ void IndexManager::_printLeafNode(IXFileHandle &ixfileHandle, const Attribute &a
 IX_ScanIterator::IX_ScanIterator()
 {
 	indexManager = IndexManager::instance();
+	op = EQ_OP;
 	currentSlot = 0;
-	currentOverFlowSlot = 0;
+	fileHandle = NULL;
 	tombStone = -1;
+	entryOffset = 0;
+	tombStoneInOverflow = -1;
+	numOfRidsInOverflow = 0;
+	keyType = TypeInt;
+	until = NULL;
+	currentOverFlowSlot = 0;
 }
 
 IX_ScanIterator::~IX_ScanIterator()
 {
+}
+
+RC IX_ScanIterator::_getNextEntryFromOverflow(void *pageToProcess, RID &rid)
+{
+	RC rc = -1;
+
+	//end of overflow and no other overflow
+	if(currentOverFlowSlot  ==  numOfRidsInOverflow && tombStoneInOverflow == -1)
+		return 1;//go ahead next entry!
+	//end of rid and there is another overflow page : move to another overflow page
+	else if(currentOverFlowSlot == numOfRidsInOverflow && tombStoneInOverflow != -1)
+	{
+		void *overflowPageToProcess = tempOverFlowPage;
+		rc = fileHandle->readPage(tombStoneInOverflow,overflowPageToProcess);//Read Page
+		if(rc != 0)
+			return rc;
+		numOfRidsInOverflow = indexManager->getNumOfEnt(overflowPageToProcess);
+		tombStoneInOverflow = indexManager->getTombstone(overflowPageToProcess);
+		currentOverFlowSlot = 0;
+	}
+
+	indexManager->getRIDInOverFlowPage(pageToProcess,currentOverFlowSlot,rid);
+
+	currentOverFlowSlot++;
+
+	return 0;
 }
 
 RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
@@ -1626,25 +1729,37 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 	RC rc = -1;
 	void *pageToProcess = tempPage;
 	void *overflowPageToProcess = tempOverFlowPage;
-
 	SlotOffset freeSpaceOffset = indexManager->getFreeSpaceOffset(pageToProcess);
+	void *entryToProcess = (char*)pageToProcess + entryOffset;
 
 	//approach to the end of the node: next Node
 	if(entryOffset == freeSpaceOffset)
 	{
+		//------------------overflow page dealing
+
+		if(tombStone != -1)
+		{
+    		rc = _getNextEntryFromOverflow(overflowPageToProcess,rid);
+    		if(rc == 0)
+    		{
+    			indexManager->copyKeyOfEntry(key,entryToProcess,keyType);
+    			return rc;
+    		}
+		}
+		//-------------------------------------------------------------------------
+
 		PageNum nextNodePage = indexManager->getRightSiblingPageNum(pageToProcess);
 
 		//end Of leaf Node
 		if(nextNodePage == -1)
 			return IX_EOF;
-
-
 		rc = fileHandle->readPage(nextNodePage,pageToProcess);//Read Page
 		if(rc != 0)
 			return rc;
 		tombStone = indexManager->getTombstone(pageToProcess);
 		entryOffset = 0;
 		currentSlot = 0;
+		entryToProcess = pageToProcess;
 
 		if(tombStone != -1)
 		{
@@ -1656,100 +1771,25 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 			tombStoneInOverflow = indexManager->getTombstone(overflowPageToProcess);
 			currentOverFlowSlot = 0;
 		}
-
+		//-------------------------------------------------------------------------
 	}
 
 
-	void *entryToProcess = (char*)pageToProcess + entryOffset;
-	numOfRids = indexManager->getNumOfRIDsInLeaf(entryToProcess,keyType);
+	if(until != NULL && !indexManager->compareKeys(entryToProcess,op,until,keyType))
+		return IX_EOF;
 
-	//Extract key value
-	if(keyType == TypeInt)
-	{
-		int value;
-		indexManager->getKeyOfEntry(entryToProcess,value);
-		indexManager->setKeyOfEntry(key,value);
+	NumOfEnt numOfRids = indexManager->getNumOfRIDsInLeaf(entryToProcess,keyType);
+	indexManager->copyKeyOfEntry(key,entryToProcess,keyType);
+	indexManager->getRIDInLeaf(entryToProcess, keyType,currentSlot, rid);
+	currentSlot++;
 
-	}
-	else if(keyType == TypeReal)
-	{
-		float value;
-		indexManager->getKeyOfEntry(entryToProcess,value);
-		indexManager->setKeyOfEntry(key,value);
-	}
-	else if(keyType == TypeVarChar)
-	{
-		string value;
-		indexManager->getKeyOfEntry(entryToProcess,value);
-		indexManager->setKeyOfEntry(key,value);
-	}
-
-	//searching for a rid in leaf entry
-
-	if(currentSlot < numOfRids)
-	{
-		indexManager->getRIDInLeaf(entryToProcess, keyType,currentSlot, rid);
-		currentSlot++;
-	}
-
-	//still there is rids remaining
-	if(currentSlot < numOfRids)
-		return 0;
-	//end of rid and there is no rids in overflow page: go to next entry
-	else if(currentSlot == numOfRids && tombStone == -1)
+	//end of rid: next entry
+	if(currentSlot == numOfRids)
 	{
 		entryOffset = entryOffset + indexManager->getSizeOfEntryInLeaf(entryToProcess,keyType);
 		currentSlot = 0;
-		return 0;
 	}
-
-
-	//from here there is overflow Page
-
-	if(currentOverFlowSlot < numOfRidsInOverflow)
-	{
-		indexManager->getRIDInOverFlowPage(overflowPageToProcess,currentOverFlowSlot,rid);
-		currentOverFlowSlot++;
-	}
-
-	//still there is rids remaining
-	if(currentOverFlowSlot < numOfRidsInOverflow)
-		return 0;
-	//end of rid and there is no rids in overflow page: go to next entry
-	else if(currentOverFlowSlot == numOfRidsInOverflow && tombStoneInOverflow == -1)
-	{
-		entryOffset = entryOffset + indexManager->getSizeOfEntryInLeaf(entryToProcess,keyType);
-		currentSlot = 0;
-		return 0;
-	}
-
-	//Load Overflow Page chaining
-	rc = fileHandle->readPage(tombStoneInOverflow,overflowPageToProcess);//Read Page
-	if(rc != 0)
-		return rc;
-	numOfRidsInOverflow = indexManager->getNumOfEnt(overflowPageToProcess);
-	tombStoneInOverflow = indexManager->getTombstone(overflowPageToProcess);
-	currentOverFlowSlot = 0;
-
-	if(currentOverFlowSlot < numOfRidsInOverflow)
-	{
-		indexManager->getRIDInOverFlowPage(overflowPageToProcess,currentOverFlowSlot,rid);
-		currentOverFlowSlot++;
-	}
-
-	//still there is rids remaining
-	if(currentOverFlowSlot < numOfRidsInOverflow)
-		return 0;
-	//end of rid and there is no rids in overflow page: go to next entry
-	else if(currentOverFlowSlot == numOfRidsInOverflow && tombStoneInOverflow == -1)
-	{
-		entryOffset = entryOffset + indexManager->getSizeOfEntryInLeaf(entryToProcess,keyType);
-		currentSlot = 0;
-		return 0;
-	}
-
-
-	return -1;
+	return 0;
 }
 
 RC IX_ScanIterator::close()
