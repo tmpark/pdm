@@ -196,6 +196,7 @@ RC IndexManager::copyKeyOfEntry(void *to, void *from, AttrType keyType)
 		getKeyOfEntry(from,value);
 		setKeyOfEntry(to,value);
 	}
+	return 0;
 }
 
 
@@ -239,7 +240,7 @@ RC IndexManager::setChildOfIntermediateEntry(void* entryToProcess, AttrType keyT
 	return 0;
 }
 
-NumOfEnt IndexManager::getNumOfRIDsInLeaf(const void* entryToProcess, AttrType keyType) const
+NumOfEnt IndexManager::getNumOfRIDsInLeafEntry(const void* entryToProcess, AttrType keyType) const
 {
 	char *numOfRidsPtr = NULL;
 	if (keyType == TypeInt)
@@ -337,6 +338,30 @@ RC IndexManager::setRIDInLeaf(const void* entryToProcess, AttrType keyType, unsi
 	*((SlotOffset*)ridsPtr) = slotNum;
 	return 0;
 }
+
+
+SlotOffset IndexManager::getRIDOffsetInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum) const
+{
+	if (keyType == TypeInt)
+	{
+		return (sizeof(int) + sizeof(NumOfEnt) + entryNum*(sizeof(PageNum) + sizeof(SlotOffset)));
+
+	}
+	else if (keyType == TypeReal)
+	{
+		return (sizeof(float) + sizeof(NumOfEnt) + entryNum*(sizeof(PageNum) + sizeof(SlotOffset)));
+
+	}
+	else if (keyType == TypeVarChar)
+	{
+		int sizeOfVarChar = *((int*)entryToProcess);
+		return (sizeof(int) + sizeOfVarChar + sizeof(NumOfEnt) + entryNum*(sizeof(PageNum) + sizeof(SlotOffset)));
+	}
+
+	return -1;
+}
+
+
 
 RC IndexManager::getRIDInOverFlowPage(const void* pageToProcess, unsigned entryNum, RID &rid) const
 {
@@ -714,7 +739,7 @@ RC IndexManager::putEntryInLeaf(void *entryToProcess, AttrType attrType, const v
 
 	if(existing)
 	{
-		NumOfEnt numOfEntry = getNumOfRIDsInLeaf(entryToProcess,attrType);
+		NumOfEnt numOfEntry = getNumOfRIDsInLeafEntry(entryToProcess,attrType);
 		setRIDInLeaf(entryToProcess,attrType,numOfEntry,rid);
 		setNumOfRIDsInLeaf(entryToProcess, attrType,numOfEntry + 1);
 	}
@@ -806,12 +831,62 @@ RC IndexManager::insertEntryInOverflowPage(IXFileHandle &ixfileHandle,PageNum cu
 
 }
 
+RC IndexManager::deleteEntryInOverflowPage(IXFileHandle &ixfileHandle,PageNum currentNodePage,void *pageToProcess,const RID &rid)
+{
+	RC rc = -1;
+	SlotOffset freeSpaceOffset = getFreeSpaceOffset(pageToProcess);
+	NumOfEnt numOfEntry = getNumOfEnt(pageToProcess);
+	PageNum tombStone = getTombstone(pageToProcess);
+	NodeType nodeType = getNodeType(pageToProcess);
+
+
+	//Searching for Rid in overflow page
+    if(nodeType == OVER_NODE)
+    {
+    	int targetRidNum = -1;
+    	for (unsigned i = 0 ; i < numOfEntry ; i++)
+    	{
+    		RID extractedRid;
+    		getRIDInOverFlowPage(pageToProcess,i,extractedRid);
+    		if(rid.pageNum == extractedRid.pageNum && rid.slotNum == extractedRid.slotNum)
+    			targetRidNum = i;
+    	}
+        //found rid to delete: delete / write / return ok
+        if(targetRidNum != -1)
+        {
+        	unsigned sizeOfEntry = sizeof(PageNum) + sizeof(SlotOffset);
+        	//Overwrite target Rid
+        	unsigned offsetToCompact = sizeOfEntry*(targetRidNum+1);
+        	moveEntries(pageToProcess,offsetToCompact,sizeOfEntry,MoveBackward);
+        	setFreeSpaceOffset(pageToProcess,freeSpaceOffset - sizeOfEntry);
+        	setNumOfEnt(pageToProcess,numOfEntry - 1);
+    		rc = ixfileHandle.fileHandle.writePage(currentNodePage,pageToProcess);//Write Page
+    		if(rc != 0)
+    			return rc;
+    		return 0;
+        }
+    }
+
+    //No more tombstone : There is no rid matching
+    if(tombStone == -1)
+    	return -1;
+
+	char overFlowPageToProcess[PAGE_SIZE];
+	//it is changed when new child node is created in its child
+	rc = ixfileHandle.fileHandle.readPage(tombStone,overFlowPageToProcess);//Read Page
+	if(rc != 0)
+		return rc;
+	rc = deleteEntryInOverflowPage(ixfileHandle,tombStone,overFlowPageToProcess,rid) ;
+
+	return rc;
+
+}
+
 RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid,
 		PageNum currentNodePage, void *newChildNodeKey, PageNum &newChildNodePage)
 {
 	RC rc = -1;
-	newChildNodeKey = NULL;
-	newChildNodePage = -1;
+
 	char pageToProcess[PAGE_SIZE];
 
 	//it is changed when new child node is created in its child
@@ -997,7 +1072,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 
 			//splitLeaf(get child node key)
 			splitLeaf(pageToProcess, newChildPageToProcess, newChildNodeKey,
-					currentNodePage, newChildNodePage,offsetToPush, attribute, key, rid);
+					currentNodePage, newChildNodePage,offsetToInsert, attribute, key, rid);
 
 			//WritePage(Current & newPage)
 			rc = ixfileHandle.fileHandle.writePage(currentNodePage,pageToProcess);//Write Page
@@ -1015,7 +1090,9 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 
 RC IndexManager::insertEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid)
 {
-
+    fstream *fileStream = ixfileHandle.fileHandle.getFileStream();
+    if(fileStream == NULL)
+    	return -1;
 	RC rc;
 	char newChildNodeKey[PAGE_SIZE];
 	PageNum newChildNodePage = -1;
@@ -1461,12 +1538,14 @@ RC IndexManager::_deleteEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 		{
 		}
 	}
+
 	else if(nodeType == LEAF_NODE)
 	{
 		char *ptrToDelete = NULL;
 		SlotOffset offsetToDelete = 0;
 		SlotOffset offsetToCompact = 0;
 		bool sameKey = false;
+		NumOfEnt numOfEnt = getNumOfEnt(pageToProcess);
 
 		/*****************************************key matching*************************************/
 		//-1 means first position
@@ -1482,105 +1561,67 @@ RC IndexManager::_deleteEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 			return -1;
 
 		offsetToDelete = entryOffset;
+
 		/****************************************rid Matching*************************************/
-
-		for (unsigned i = 1 ; i < getNumOfRIDsInLeaf(entryToProcess,attribute.type) ; i++)
+		int targetRidNum = -1;
+		unsigned numOfRid = getNumOfRIDsInLeafEntry(entryToProcess,attribute.type);
+		for (unsigned i = 0 ; i <  numOfRid; i++)
 		{
-
+			RID extractedRid;
+			getRIDInLeaf(entryToProcess,attribute.type,i,extractedRid);
+			if(rid.pageNum == extractedRid.pageNum && rid.slotNum == extractedRid.slotNum)
+				targetRidNum = i;
 		}
 
-
-
-
-
-		//offsetToCompact = entryOffset + getSizeOfEntryInLeaf(entryToProcess,attribute.type);
-
-		ptrToDelete = pageToProcess + offsetToDelete;
-
-		PageNum tombstone = getTombstone(pageToProcess);
-
-		//Rid Scan
-
-
-		//Overflowed Node: go inside overflow page and return null
-		if(tombstone != -1)
+		//No rid here
+		if(targetRidNum == -1)
 		{
-			rc = insertEntryInOverflowPage(ixfileHandle,currentNodePage,pageToProcess,rid);
-			newChildNodeKey = NULL;
-			newChildNodePage = -1;
-			return 0;
+			PageNum tombstone = getTombstone(pageToProcess);
+			//No tombstone
+			if(tombstone == -1)
+				return -1;//No matching rid
+			rc = deleteEntryInOverflowPage(ixfileHandle,currentNodePage,pageToProcess,rid);
+			return rc;
 		}
 
-		unsigned freeSpaceSize = getFreeSpaceSize(pageToProcess);
+		//There is matching rid here
+
+		//Delete Entry
 
 		unsigned entrySize = 0;
-
-		//Entry size is different in terms of new or not
-		if(sameKey)
+		if(numOfRid == 1)
+		{
+			entrySize = getSizeOfEntryInLeaf(entryToProcess,attribute.type);
+			offsetToCompact = offsetToDelete + entrySize;
+			moveEntries(pageToProcess,offsetToCompact,entrySize,MoveBackward);
+			setNumOfEnt(pageToProcess,numOfEnt-1);
+		}
+		//Delete Rid in entry
+		else
+		{
 			entrySize = sizeof(PageNum) + sizeof(SlotOffset);
-		else
-			entrySize = calNewLeafEntrySize(key, attribute.type);
-
-
-		if(freeSpaceSize >= entrySize)
-		{
-
-			//push as much as entrySize (Push check whether there needs push)
-			rc = pushEntries(pageToProcess,offsetToCompact,entrySize);
-			rc = putEntryInLeaf(ptrToDelete,attribute.type,key,rid,sameKey);
-
-			if(!sameKey)//slot increases
-			{
-				NumOfEnt numOfEntry = getNumOfEnt(pageToProcess);
-				setNumOfEnt(pageToProcess, numOfEntry + 1);
-			}
-
-
-
-			//writePage
-			rc = ixfileHandle.fileHandle.writePage(currentNodePage,pageToProcess);//Write Page
-			if(rc != 0)
-				return rc;
-
-			newChildNodeKey = NULL;
-			newChildNodePage = -1;
-
+			SlotOffset targetRidOffset = getRIDOffsetInLeaf(entryToProcess,attribute.type,targetRidNum);
+			offsetToCompact = offsetToDelete + targetRidOffset + entrySize;
+			moveEntries(pageToProcess,offsetToCompact,entrySize,MoveBackward);
+			setNumOfRIDsInLeaf(entryToProcess,attribute.type,numOfRid - 1);
 		}
-		//Same key insertion and num of entry == 1 and no space means it requires overflow page.
-		else if(sameKey && (getNumOfEnt(pageToProcess) == 1))
-		{
-			rc = insertEntryInOverflowPage(ixfileHandle,currentNodePage, pageToProcess, rid);
-			newChildNodeKey = NULL;
-			newChildNodePage = -1;
-		}
-		//split
-		else
-		{
-			char newChildPageToProcess[PAGE_SIZE];
-			newChildNodePage = ixfileHandle.fileHandle.getNumberOfPages();
+		//write
 
-			//splitLeaf(get child node key)
-			splitLeaf(pageToProcess, newChildPageToProcess, newChildNodeKey,
-					currentNodePage, newChildNodePage,offsetToCompact, attribute, key, rid);
-
-			//WritePage(Current & newPage)
-			rc = ixfileHandle.fileHandle.writePage(currentNodePage,pageToProcess);//Write Page
-			if(rc != 0)
-				return rc;
-
-			rc = ixfileHandle.fileHandle.appendPage(newChildPageToProcess);
-			if(rc != 0)
-				return rc;
-		}
+		rc = ixfileHandle.fileHandle.writePage(currentNodePage,pageToProcess);//Write Page
+		if(rc != 0)
+			return rc;
 	}
-
-	return 0;
+	return rc;
 }
 
 
 
 RC IndexManager::deleteEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid)
 {
+    fstream *fileStream = ixfileHandle.fileHandle.getFileStream();
+    if(fileStream == NULL)
+    	return -1;
+
 	RC rc;
 	char newChildNodeKey[PAGE_SIZE];
 	PageNum newChildNodePage = -1;
@@ -1599,6 +1640,10 @@ RC IndexManager::scan(IXFileHandle &ixfileHandle,
 		bool        	highKeyInclusive,
 		IX_ScanIterator &ix_ScanIterator)
 {
+    fstream *fileStream = ixfileHandle.fileHandle.getFileStream();
+    if(fileStream == NULL)
+    	return -1;
+
 	RC rc = -1;
 
 	void *pageToProcess = tempPage;
@@ -1982,7 +2027,7 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 	if(until != NULL && !indexManager->compareKeys(entryToProcess,op,until,keyType))
 		return IX_EOF;
 
-	NumOfEnt numOfRids = indexManager->getNumOfRIDsInLeaf(entryToProcess,keyType);
+	NumOfEnt numOfRids = indexManager->getNumOfRIDsInLeafEntry(entryToProcess,keyType);
 	indexManager->copyKeyOfEntry(key,entryToProcess,keyType);
 	indexManager->getRIDInLeaf(entryToProcess, keyType,currentSlot, rid);
 	currentSlot++;

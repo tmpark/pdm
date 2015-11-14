@@ -104,11 +104,13 @@ public:
 	RC setChildOfIntermediateEntry(void* entryToProcess, AttrType keyType, PageNum childPageNum);
 
 
-	NumOfEnt getNumOfRIDsInLeaf(const void* entryToProcess, AttrType keyType) const;
+	NumOfEnt getNumOfRIDsInLeafEntry(const void* entryToProcess, AttrType keyType) const;
 	RC setNumOfRIDsInLeaf(const void* entryToProcess, AttrType keyType, NumOfEnt numOfRids);
 
 	RC getRIDInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid) const;
 	RC setRIDInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid);
+
+	SlotOffset getRIDOffsetInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum) const;
 
 
 	unsigned calNewLeafEntrySize(const void* key, AttrType keyType) const;
@@ -134,7 +136,7 @@ public:
 
 
 	RC insertEntryInOverflowPage(IXFileHandle &ixfileHandle,PageNum currentNodePage,void *pageToProcess,const RID &rid);
-
+	RC deleteEntryInOverflowPage(IXFileHandle &ixfileHandle,PageNum currentNodePage,void *pageToProcess,const RID &rid);
 
 	char tempPage[PAGE_SIZE];
 	char tempOverFlowPage[PAGE_SIZE];
