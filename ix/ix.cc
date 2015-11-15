@@ -963,37 +963,35 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 			//Not enough space : intermediate node split
 			else
 			{
-
-
 				newChildNodePage = ixfileHandle.fileHandle.getNumberOfPages();
 				char returnedEntry[PAGE_SIZE];
 				char newChildPageToProcess[PAGE_SIZE];
 				if(currentNodePage == 0)
 				{
 					char newRootPageToProcess[PAGE_SIZE];
-					splitIntermediate(pageToProcess, newChildPageToProcess, NULL,
-							returnedEntry, newChildNodeKey, attribute.type, currentNodePage,
-							newChildNodePage, offsetToInsert);
+					splitIntermediate(pageToProcess, newChildPageToProcess, newRootPageToProcess,
+							returnedEntry, newChildNodeKey, attribute.type, newChildNodePage,
+							newChildNodePage + 1, offsetToInsert);
 					//Copy returned entry to newChildNodekey
 					unsigned sizeOfKey = getSizeOfEntryInIntermediate(returnedEntry,attribute.type);
 					memcpy(newChildNodeKey,returnedEntry,sizeOfKey);
 					//WritePage(Current & newPage)
-					rc = ixfileHandle.fileHandle.writePage(currentNodePage,pageToProcess);//Write Page
+					rc = ixfileHandle.fileHandle.writePage(currentNodePage,newRootPageToProcess);//Write Page
+					if(rc != 0)
+						return rc;
+					rc = ixfileHandle.fileHandle.appendPage(pageToProcess);
 					if(rc != 0)
 						return rc;
 					rc = ixfileHandle.fileHandle.appendPage(newChildPageToProcess);
 					if(rc != 0)
 						return rc;
-					rc = ixfileHandle.fileHandle.appendPage(newChildPageToProcess);
-					if(rc != 0)
-						return rc;
-
 				}
 				else
 				{
 					splitIntermediate(pageToProcess, newChildPageToProcess, NULL,
 							returnedEntry, newChildNodeKey, attribute.type, currentNodePage,
 							newChildNodePage, offsetToInsert);
+
 					//Copy returned entry to newChildNodekey
 					unsigned sizeOfKey = getSizeOfEntryInIntermediate(returnedEntry,attribute.type);
 					memcpy(newChildNodeKey,returnedEntry,sizeOfKey);
