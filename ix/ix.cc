@@ -2047,8 +2047,8 @@ void IndexManager::_printLeafNode(IXFileHandle &ixfileHandle, const Attribute &a
 			while(overflowOffset != oflowFreeSpaceOffs)
 			{
 				cout << "(";
-				PageNum p = *(PageNum *)(node + overflowOffset);
-				SlotOffset s = *(SlotOffset *)(node + overflowOffset + sizeof(PageNum));
+				PageNum p = *(PageNum *)(overflowPage + overflowOffset);
+				SlotOffset s = *(SlotOffset *)(overflowPage + overflowOffset + sizeof(PageNum));
 				cout << p << "," << s << ")";
 				overflowOffset += sizeof(PageNum) + sizeof(SlotOffset);
 				if(overflowOffset != oflowFreeSpaceOffs) cout << ",";
