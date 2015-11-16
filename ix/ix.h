@@ -98,7 +98,7 @@ public:
 	RC setKeyOfEntry(void* entryToProcess, T value);
 	RC setKeyOfEntry(void* entryToProcess, string value);
 
-	RC copyKeyOfEntry(void *to, void *from, AttrType keyType);
+	RC copyKeyOfEntry(void *to, const void *from, AttrType keyType);
 
 	PageNum getChildOfIntermediateEntry(const void* entryToProcess, AttrType keyType) const;
 	RC setChildOfIntermediateEntry(void* entryToProcess, AttrType keyType, PageNum childPageNum);
@@ -108,7 +108,7 @@ public:
 	RC setNumOfRIDsInLeaf(const void* entryToProcess, AttrType keyType, NumOfEnt numOfRids);
 
 	RC getRIDInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid) const;
-	RC setRIDInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid);
+	RC setRIDInLeaf(void* entryToProcess, AttrType keyType, unsigned entryNum, const RID &rid);
 
 	SlotOffset getRIDOffsetInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum) const;
 

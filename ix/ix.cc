@@ -174,7 +174,7 @@ RC IndexManager::setKeyOfEntry(void* entryToProcess, string value)
 	return 0;
 }
 
-RC IndexManager::copyKeyOfEntry(void *to, void *from, AttrType keyType)
+RC IndexManager::copyKeyOfEntry(void *to, const void *from, AttrType keyType)
 {
 	//Extract key value
 	if(keyType == TypeInt)
@@ -312,7 +312,7 @@ RC IndexManager::getRIDInLeaf(const void* entryToProcess, AttrType keyType, unsi
 
 
 
-RC IndexManager::setRIDInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid)
+RC IndexManager::setRIDInLeaf(void* entryToProcess, AttrType keyType, unsigned entryNum, const RID &rid)
 {
 	char *ridsPtr = NULL;
 	PageNum pageNum = rid.pageNum;
@@ -1151,15 +1151,27 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 
 			cout << getFreeSpaceOffset(pageToProcess)<<"\t"<<getNumOfEnt(pageToProcess)<<"\t"<<getTombstone(pageToProcess)<<"\t"<<getNodeType(pageToProcess)<<"\t"<<getParentPageNum(pageToProcess)<<"\t"<<getLeftSiblingPageNum(pageToProcess)<<"\t"<<getRightSiblingPageNum(pageToProcess)<<"\t"<<getLeftMostChildPageNum(pageToProcess)<<endl;
 			cout << getFreeSpaceOffset(newChildPageToProcess)<<"\t"<<getNumOfEnt(newChildPageToProcess)<<"\t"<<getTombstone(newChildPageToProcess)<<"\t"<<getNodeType(newChildPageToProcess)<<"\t"<<getParentPageNum(newChildPageToProcess)<<"\t"<<getLeftSiblingPageNum(newChildPageToProcess)<<"\t"<<getRightSiblingPageNum(newChildPageToProcess)<<"\t"<<getLeftMostChildPageNum(newChildPageToProcess)<<endl;
-			unsigned numOfEnt = getNumOfEnt(newChildPageToProcess);
-			char *entryToProcessTemp = newChildPageToProcess;
+
+			unsigned numOfEnt = getNumOfEnt(pageToProcess);
+			char *entryToProcessTemp = pageToProcess;
 			for(unsigned i = 0; i <  numOfEnt; i++)
 			{
 				string key;
 				getKeyOfEntry(entryToProcessTemp,key);
 				cout << key << endl;
+				unsigned numOfRid = getNumOfRIDsInLeafEntry(entryToProcessTemp,attribute.type) ;
+				for(unsigned j = 0 ; j < numOfRid; j++)
+				{
+					RID extracted;
+					getRIDInLeaf(entryToProcess,attribute.type,j,extracted);
+					cout << extracted.pageNum << '\t' << extracted.slotNum << endl << flush;
+
+				}
 				entryToProcessTemp = entryToProcessTemp + getSizeOfEntryInLeaf(entryToProcessTemp,attribute.type);
 			}
+
+			cout << "sibal\n";
+
 
 		}
 	}
@@ -1318,314 +1330,7 @@ RC IndexManager::splitIntermediate(void *interNode, void *newInterNode, void *ne
 }
 
 
-RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntry,
-        PageNum LeafNodePN, PageNum newLeafNodePN,
-        int offset, const Attribute &Attribute, const void *key, const RID &rid)
-{
 
-    //check whether we will add rid to existing entry or add new entry to node
-    bool newEntryNeeded = true;
-
-
-    char* entryToProcess = ((char *)leafNode) + offset;
-    if(Attribute.type == TypeInt)
-    {
-        int value;
-        RC rc = getKeyOfEntry(entryToProcess,value);
-        if(value == *(int *)key)
-        {
-            newEntryNeeded = false;
-        }
-    }
-    else if(Attribute.type == TypeReal)
-    {
-        float value;
-        RC rc = getKeyOfEntry(entryToProcess,value);
-        if(value == *(float *)key)
-        {
-            newEntryNeeded = false;
-        }
-    }
-    else if(Attribute.type == TypeVarChar)
-    {
-        string value;
-        RC rc = getKeyOfEntry(entryToProcess,value);
-        string s;
-        RC rcs = getKeyOfEntry(key,s);
-        if(value == s)
-        {
-            newEntryNeeded = false;
-        }
-    }
-
-    if(newEntryNeeded)//create new entry and shift entries to new leaf node
-    {
-        char newEnt[400];
-        char *newEntry = newEnt;
-        char *newEntryStartAddr = newEntry;
-        NumOfEnt numOfRIDs = 1;
-        if(Attribute.type == TypeInt)
-        {
-            memcpy(newEntry, key, sizeof(int));//copying key
-            newEntry += sizeof(int);
-        }
-        else if(Attribute.type == TypeReal)
-        {
-            memcpy(newEntry, key, sizeof(float));//copying key
-            newEntry += sizeof(float);
-        }
-        else
-        {
-            int keyLength = *(int *)key;
-            memcpy(newEntry, key, keyLength + 4);//copying key
-            newEntry += keyLength + 4;
-        }
-        memcpy(newEntry , &numOfRIDs, sizeof(NumOfEnt));
-        newEntry += sizeof(NumOfEnt);
-        memcpy(newEntry, &(rid.pageNum), sizeof(PageNum));
-        newEntry += sizeof(PageNum);
-        memcpy(newEntry, &(rid.slotNum), sizeof(SlotOffset));
-        newEntry += sizeof(SlotOffset);
-        int newEntrySize = newEntry - newEntryStartAddr;
-
-        int secondPartOffset = 0;
-        int firstPartOffset = 0;
-        int leafNodeOffset = 0;
-        char fPart[WHOLE_SIZE_FOR_ENTRIES];
-        char *firstPart = fPart;
-        char *secondPart = (char *) newLeafNode;
-
-        int entSize = 0;
-        int numOfEntriesF = 0;
-        bool inserted = false;
-        while(leafNodeOffset < WHOLE_SIZE_FOR_ENTRIES/2)
-        {
-            numOfEntriesF++;
-            if(leafNodeOffset == offset && !inserted)
-            {
-                memcpy(firstPart + firstPartOffset, newEntryStartAddr, newEntrySize);
-                firstPartOffset += newEntrySize;
-                inserted = true;
-                continue;
-            }
-            entSize = getSizeOfEntryInLeaf(((char *)leafNode) + leafNodeOffset, Attribute.type);
-            if(leafNodeOffset + entSize > WHOLE_SIZE_FOR_ENTRIES)
-            {
-                numOfEntriesF--;
-                break; //Nice and easy solution to special case where last entry to
-                //this node is very big so that it causes overflow in the node and
-                //writes to page dic.
-            }
-            if(firstPartOffset + entSize > WHOLE_SIZE_FOR_ENTRIES)
-            {
-                numOfEntriesF--;
-                break;
-            }
-            memcpy(firstPart + firstPartOffset, ((char *)leafNode) + leafNodeOffset, entSize);
-            firstPartOffset += entSize;
-            leafNodeOffset += entSize;
-        }
-
-        //Create newChildNode
-        int numOfEntriesS = 0;
-        int freeSpaceOffset = getFreeSpaceOffset(leafNode);
-        if(leafNodeOffset != freeSpaceOffset)
-        {
-            char *newCEntryBuff = (char *)newChildEntry;
-
-            if(Attribute.type == TypeInt)
-            {
-                setKeyOfEntry(newChildEntry,*(int *)(((char *)leafNode) + leafNodeOffset));
-                memcpy(newCEntryBuff + sizeof(int), &newLeafNodePN, sizeof(PageNum));
-            }
-            else if(Attribute.type == TypeReal)
-            {
-                setKeyOfEntry(newChildEntry,*(float *)(((char *)leafNode) + leafNodeOffset));
-                memcpy(newCEntryBuff + sizeof(float), &newLeafNodePN, sizeof(PageNum));
-            }
-            else
-            {
-                string k = extractVarChar(((char *)leafNode) + leafNodeOffset);
-                int kLength = k.length();
-                char *newCEntryBuff = (char *)newChildEntry;
-                memcpy(newCEntryBuff, &kLength, 4);
-                memcpy(newCEntryBuff + 4, k.c_str(), kLength);
-                memcpy(newCEntryBuff + 4 + kLength, &newLeafNodePN, sizeof(PageNum));
-            }
-        }
-        else
-        {
-            cout << "ERROR: if(new entry)" << endl;
-            return -1; //means that we did not split and probably it will cause an error.
-        }
-        //Create new leaf node
-        inserted = false;
-        while(leafNodeOffset != freeSpaceOffset)
-        {
-            if(leafNodeOffset == offset && !inserted)
-            {
-                numOfEntriesS++;
-                memcpy(secondPart + secondPartOffset, newEntryStartAddr, newEntrySize);
-                secondPartOffset += newEntrySize;
-                inserted = true;
-                continue;
-            }
-            numOfEntriesS++;
-            entSize = getSizeOfEntryInLeaf(((char *)leafNode) + leafNodeOffset, Attribute.type);
-            memcpy(secondPart + secondPartOffset, ((char *)leafNode) + leafNodeOffset, entSize);
-            secondPartOffset += entSize;
-            leafNodeOffset += entSize;
-        }
-
-        if(freeSpaceOffset == offset)
-        {
-            numOfEntriesS++;
-            memcpy(secondPart + secondPartOffset, newEntryStartAddr, newEntrySize);
-            secondPartOffset += newEntrySize;
-        }
-
-        //update second part of Page DIC
-        setRightSiblingPageNum(newLeafNode, getRightSiblingPageNum(leafNode));
-        setLeftSiblingPageNum(newLeafNode, LeafNodePN);
-        setParentPageNum(newLeafNode, getParentPageNum(leafNode));
-        setNodeType(newLeafNode, LEAF_NODE);
-        setTombstone(newLeafNode, -1);
-        setNumOfEnt(newLeafNode, (NumOfEnt)numOfEntriesS);
-        setFreeSpaceOffset(newLeafNode,(SlotOffset) secondPartOffset);
-        setLeftMostChildPageNum(newLeafNode, -1);
-
-        //Write first part to existing leafNode and update Page DIC
-        memcpy(leafNode, firstPart, firstPartOffset);
-        setRightSiblingPageNum(leafNode, newLeafNodePN);
-        setNumOfEnt(leafNode, (NumOfEnt)numOfEntriesF);
-        setFreeSpaceOffset(leafNode,(SlotOffset) firstPartOffset);
-    }
-    else//newEntry is not needed but we need a new leaf node and we need to
-        //add rid to ridlist and also shift some entries to new node
-    {
-        int secondPartOffset = 0;
-        int firstPartOffset = 0;
-        int leafNodeOffset = 0;
-        char fPart[WHOLE_SIZE_FOR_ENTRIES];
-        char *firstPart = fPart;
-        char *secondPart = (char *) newLeafNode;
-        int entSize = 0;
-        int numOfEntriesF = 0;
-
-        while(leafNodeOffset < WHOLE_SIZE_FOR_ENTRIES/2)
-        {
-            numOfEntriesF++;
-            entSize = getSizeOfEntryInLeaf(((char *)leafNode) + leafNodeOffset, Attribute.type);
-            if(leafNodeOffset + entSize + sizeof(PageNum)
-                    + sizeof(SlotOffset) > WHOLE_SIZE_FOR_ENTRIES)
-            {
-                numOfEntriesF--;
-                break; //Nice and easy solution to special case where last entry to
-                //this node is very big so that it causes overflow in the node and
-                //writes to page dic.
-            }
-            if(firstPartOffset + entSize > WHOLE_SIZE_FOR_ENTRIES)
-            {
-                numOfEntriesF--;
-                break;
-            }
-
-            memcpy(firstPart + firstPartOffset, ((char *)leafNode) + leafNodeOffset, entSize);
-            firstPartOffset += entSize;
-            if(leafNodeOffset == offset)
-            {
-                setNumOfRIDsInLeaf(firstPart + firstPartOffset - entSize, Attribute.type,
-                        getNumOfRIDsInLeafEntry(firstPart+ firstPartOffset - entSize,Attribute.type) + 1);
-                memcpy(firstPart + firstPartOffset, &(rid.pageNum), sizeof(PageNum));
-                firstPartOffset += sizeof(PageNum);
-                memcpy(firstPart + firstPartOffset, &(rid.slotNum), sizeof(SlotOffset));
-                firstPartOffset += sizeof(SlotOffset);
-                leafNodeOffset += entSize;
-                continue;
-            }
-            leafNodeOffset += entSize;
-
-        }
-
-        //Create newChildNode
-        int freeSpaceOffset = getFreeSpaceOffset(leafNode);
-        if(leafNodeOffset != freeSpaceOffset)
-        {
-            char *newCEntryBuff = (char *)newChildEntry;
-
-            if(Attribute.type == TypeInt)
-            {
-                setKeyOfEntry(newChildEntry,*(int *)(((char *)leafNode) + leafNodeOffset));
-                memcpy(newCEntryBuff + sizeof(int), &newLeafNodePN, sizeof(PageNum));
-            }
-            else if(Attribute.type == TypeReal)
-            {
-                setKeyOfEntry(newChildEntry,*(float *)(((char *)leafNode) + leafNodeOffset));
-                memcpy(newCEntryBuff + sizeof(float), &newLeafNodePN, sizeof(PageNum));
-            }
-            else
-            {
-                string k = extractVarChar(((char *)leafNode) + leafNodeOffset);
-                int kLength = k.length();
-                char *newCEntryBuff = (char *)newChildEntry;
-                memcpy(newCEntryBuff, &kLength, 4);
-                memcpy(newCEntryBuff + 4, k.c_str(), kLength);
-                memcpy(newCEntryBuff + 4 + kLength, &newLeafNodePN, sizeof(PageNum));
-            }
-        }
-        else
-        {
-            cout << "ERROR: else" << endl;
-            return -1; //means that we did not split and probably it will cause an error.
-        }
-        //Create new leaf node
-        int numOfEntriesS = 0;
-        while(leafNodeOffset != freeSpaceOffset)
-        {
-            numOfEntriesS++;
-            entSize = getSizeOfEntryInLeaf(((char *)leafNode) + leafNodeOffset, Attribute.type);
-            memcpy(secondPart + secondPartOffset, ((char *)leafNode) + leafNodeOffset, entSize);
-            secondPartOffset += entSize;
-            if(leafNodeOffset == offset)
-            {
-                setNumOfRIDsInLeaf(secondPart + secondPartOffset - entSize, Attribute.type,
-                        getNumOfRIDsInLeafEntry(secondPart + secondPartOffset - entSize, Attribute.type) + 1);
-                memcpy(firstPart + secondPartOffset, &(rid.pageNum), sizeof(PageNum));
-                secondPartOffset += sizeof(PageNum);
-                memcpy(firstPart + secondPartOffset, &(rid.slotNum), sizeof(SlotOffset));
-                secondPartOffset += sizeof(SlotOffset);
-                leafNodeOffset += entSize;
-                continue;
-            }
-            leafNodeOffset += entSize;
-        }
-
-        //update second part of Page DIC
-        setRightSiblingPageNum(newLeafNode, getRightSiblingPageNum(leafNode));
-        setLeftSiblingPageNum(newLeafNode, LeafNodePN);
-        setParentPageNum(newLeafNode, getParentPageNum(leafNode));
-        setNodeType(newLeafNode, LEAF_NODE);
-        setTombstone(newLeafNode, -1);
-        setNumOfEnt(newLeafNode, (NumOfEnt)numOfEntriesS);
-        setFreeSpaceOffset(newLeafNode,(SlotOffset) secondPartOffset);
-        setLeftMostChildPageNum(newLeafNode, -1);
-
-        //Write first part to existing leafNode and update Page DIC
-        memcpy(leafNode, firstPart, firstPartOffset);
-        setRightSiblingPageNum(leafNode, newLeafNodePN);
-        setNumOfEnt(leafNode, (NumOfEnt)numOfEntriesF);
-        setFreeSpaceOffset(leafNode,(SlotOffset) firstPartOffset);
-
-    }
-    //if we will add rid to existing entry check current size + PageNum + SlotOffset < total free space in a PAGE
-    //Or simply check numofentries =? 1. HAha it is more smarter way.
-    //Depending on the result: newLeafNode = overflow page or newLeafNode = leaf page
-
-    //if newLeafNode == leaf page
-    //
-
-    return 0;
-}
 
 
 RC IndexManager::_deleteEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid,
