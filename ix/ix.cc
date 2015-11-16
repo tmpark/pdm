@@ -174,7 +174,7 @@ RC IndexManager::setKeyOfEntry(void* entryToProcess, string value)
 	return 0;
 }
 
-RC IndexManager::copyKeyOfEntry(void *to, void *from, AttrType keyType)
+RC IndexManager::copyKeyOfEntry(void *to, const void *from, AttrType keyType)
 {
 	//Extract key value
 	if(keyType == TypeInt)
@@ -312,7 +312,7 @@ RC IndexManager::getRIDInLeaf(const void* entryToProcess, AttrType keyType, unsi
 
 
 
-RC IndexManager::setRIDInLeaf(const void* entryToProcess, AttrType keyType, unsigned entryNum, RID &rid)
+RC IndexManager::setRIDInLeaf(void* entryToProcess, AttrType keyType, unsigned entryNum, const RID &rid)
 {
 	char *ridsPtr = NULL;
 	PageNum pageNum = rid.pageNum;
@@ -1149,6 +1149,28 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 				printf("sibal\n");
 			}
 
+<<<<<<< HEAD
+			cout << getFreeSpaceOffset(pageToProcess)<<"\t"<<getNumOfEnt(pageToProcess)<<"\t"<<getTombstone(pageToProcess)<<"\t"<<getNodeType(pageToProcess)<<"\t"<<getParentPageNum(pageToProcess)<<"\t"<<getLeftSiblingPageNum(pageToProcess)<<"\t"<<getRightSiblingPageNum(pageToProcess)<<"\t"<<getLeftMostChildPageNum(pageToProcess)<<endl;
+			cout << getFreeSpaceOffset(newChildPageToProcess)<<"\t"<<getNumOfEnt(newChildPageToProcess)<<"\t"<<getTombstone(newChildPageToProcess)<<"\t"<<getNodeType(newChildPageToProcess)<<"\t"<<getParentPageNum(newChildPageToProcess)<<"\t"<<getLeftSiblingPageNum(newChildPageToProcess)<<"\t"<<getRightSiblingPageNum(newChildPageToProcess)<<"\t"<<getLeftMostChildPageNum(newChildPageToProcess)<<endl;
+
+			unsigned numOfEnt = getNumOfEnt(pageToProcess);
+			char *entryToProcessTemp = pageToProcess;
+			for(unsigned i = 0; i <  numOfEnt; i++)
+			{
+				string key;
+				getKeyOfEntry(entryToProcessTemp,key);
+				cout << key << endl;
+				unsigned numOfRid = getNumOfRIDsInLeafEntry(entryToProcessTemp,attribute.type) ;
+				for(unsigned j = 0 ; j < numOfRid; j++)
+				{
+					RID extracted;
+					getRIDInLeaf(entryToProcess,attribute.type,j,extracted);
+					cout << extracted.pageNum << '\t' << extracted.slotNum << endl << flush;
+
+				}
+				entryToProcessTemp = entryToProcessTemp + getSizeOfEntryInLeaf(entryToProcessTemp,attribute.type);
+			}
+=======
 //			cout << getFreeSpaceOffset(pageToProcess)<<"\t"<<getNumOfEnt(pageToProcess)<<"\t"<<getTombstone(pageToProcess)<<"\t"<<getNodeType(pageToProcess)<<"\t"<<getParentPageNum(pageToProcess)<<"\t"<<getLeftSiblingPageNum(pageToProcess)<<"\t"<<getRightSiblingPageNum(pageToProcess)<<"\t"<<getLeftMostChildPageNum(pageToProcess)<<endl;
 //			cout << getFreeSpaceOffset(newChildPageToProcess)<<"\t"<<getNumOfEnt(newChildPageToProcess)<<"\t"<<getTombstone(newChildPageToProcess)<<"\t"<<getNodeType(newChildPageToProcess)<<"\t"<<getParentPageNum(newChildPageToProcess)<<"\t"<<getLeftSiblingPageNum(newChildPageToProcess)<<"\t"<<getRightSiblingPageNum(newChildPageToProcess)<<"\t"<<getLeftMostChildPageNum(newChildPageToProcess)<<endl;
 //			unsigned numOfEnt = getNumOfEnt(newChildPageToProcess);
@@ -1160,6 +1182,10 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 //				cout << key << endl;
 //				entryToProcessTemp = entryToProcessTemp + getSizeOfEntryInLeaf(entryToProcessTemp,attribute.type);
 //			}
+>>>>>>> 07d365439ab4141ee46282c124513a853b45227c
+
+			cout << "sibal\n";
+
 
 		}
 	}
@@ -1322,6 +1348,7 @@ RC IndexManager::splitIntermediate(void *interNode, void *newInterNode, void *ne
 
 	return 0;
 }
+
 
 
 RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntry,
@@ -1627,6 +1654,7 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 
 	return 0;
 }
+
 
 
 RC IndexManager::_deleteEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid,
