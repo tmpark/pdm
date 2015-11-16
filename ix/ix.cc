@@ -1134,23 +1134,23 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 				return rc;
 
 
-			int temptemp;
-			getKeyOfEntry(entryToProcess,temptemp);
-			if(temptemp == 338)
-			{
-				printf("sibal\n");
-			}
-			if(temptemp == 339)
-			{
-				printf("sibal\n");
-			}
-			if(temptemp == 340)
-			{
-				printf("sibal\n");
-			}
-
-
-			cout << "sibal\n";
+//			int temptemp;
+//			getKeyOfEntry(entryToProcess,temptemp);
+//			if(temptemp == 338)
+//			{
+//				printf("sibal\n");
+//			}
+//			if(temptemp == 339)
+//			{
+//				printf("sibal\n");
+//			}
+//			if(temptemp == 340)
+//			{
+//				printf("sibal\n");
+//			}
+//
+//
+//			cout << "sibal\n";
 
 
 		}
@@ -1582,11 +1582,16 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 			secondPartOffset += entSize;
 			if(leafNodeOffset == offset)
 			{
+				int y = getNumOfRIDsInLeafEntry(secondPart + secondPartOffset - entSize, Attribute.type);
+
 				setNumOfRIDsInLeaf(secondPart + secondPartOffset - entSize, Attribute.type,
 						getNumOfRIDsInLeafEntry(secondPart + secondPartOffset - entSize, Attribute.type) + 1);
-				memcpy(firstPart + secondPartOffset, &(rid.pageNum), sizeof(PageNum));
+
+				int x = getNumOfRIDsInLeafEntry(secondPart + secondPartOffset - entSize, Attribute.type);
+
+				memcpy(secondPart + secondPartOffset, &(rid.pageNum), sizeof(PageNum));
 				secondPartOffset += sizeof(PageNum);
-				memcpy(firstPart + secondPartOffset, &(rid.slotNum), sizeof(SlotOffset));
+				memcpy(secondPart + secondPartOffset, &(rid.slotNum), sizeof(SlotOffset));
 				secondPartOffset += sizeof(SlotOffset);
 				leafNodeOffset += entSize;
 				continue;
