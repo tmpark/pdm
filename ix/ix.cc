@@ -1138,6 +1138,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 			if(rc != 0)
 				return rc;
 
+
 			cout << getFreeSpaceOffset(pageToProcess)<<"\t"<<getNumOfEnt(pageToProcess)<<"\t"<<getTombstone(pageToProcess)<<"\t"<<getNodeType(pageToProcess)<<"\t"<<getParentPageNum(pageToProcess)<<"\t"<<getLeftSiblingPageNum(pageToProcess)<<"\t"<<getRightSiblingPageNum(pageToProcess)<<"\t"<<getLeftMostChildPageNum(pageToProcess)<<endl;
 			cout << getFreeSpaceOffset(newChildPageToProcess)<<"\t"<<getNumOfEnt(newChildPageToProcess)<<"\t"<<getTombstone(newChildPageToProcess)<<"\t"<<getNodeType(newChildPageToProcess)<<"\t"<<getParentPageNum(newChildPageToProcess)<<"\t"<<getLeftSiblingPageNum(newChildPageToProcess)<<"\t"<<getRightSiblingPageNum(newChildPageToProcess)<<"\t"<<getLeftMostChildPageNum(newChildPageToProcess)<<endl;
 
@@ -1158,7 +1159,8 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 				entryToProcessTemp = entryToProcessTemp + getSizeOfEntryInLeaf(entryToProcessTemp,attribute.type);
 			}
 			//printBtree(ixfileHandle,attribute);
-			cout << "sibal\n";
+
+			printf("sibal\n");
 
 
 		}
@@ -1332,7 +1334,7 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 
 	//check whether we will add rid to existing entry or add new entry to node
 	bool newEntryNeeded = true;
-
+	int l = getNumOfEnt(leafNode);
 
 	char* entryToProcess = ((char *)leafNode) + offset;
 	if(Attribute.type == TypeInt)
@@ -1367,7 +1369,7 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 
 	if(newEntryNeeded)//create new entry and shift entries to new leaf node
 			{
-		char newEnt[400];
+		char newEnt[WHOLE_SIZE_FOR_ENTRIES];
 		char *newEntry = newEnt;
 		char *newEntryStartAddr = newEntry;
 		NumOfEnt numOfRIDs = 1;
@@ -1601,6 +1603,8 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 			}
 			leafNodeOffset += entSize;
 		}
+
+
 
 		//update second part of Page DIC
 		setRightSiblingPageNum(newLeafNode, getRightSiblingPageNum(leafNode));
