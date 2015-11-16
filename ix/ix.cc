@@ -624,6 +624,7 @@ RC IndexManager::moveEntries(void *pageToProcess,SlotOffset from,unsigned amount
 {
 	unsigned freeSpaceOffset = getFreeSpaceOffset(pageToProcess);
 	unsigned amountOfData = freeSpaceOffset - from;
+
 	char buf[amountOfData];
 	memcpy(buf,(char*)pageToProcess+from,amountOfData);
 	if(direction == MoveForward)
@@ -773,7 +774,6 @@ RC IndexManager::putEntryInLeaf(void *entryToProcess, AttrType attrType, const v
 			memcpy((char*)entryToProcess + sizeof(int) , (char*)key + sizeof(int), sizeOfVarChar);
 			setRIDInLeaf(entryToProcess,attrType,0,rid);
 			setNumOfRIDsInLeaf(entryToProcess,attrType,1);
-
 		}
 	}
 	return 0;
@@ -835,6 +835,7 @@ RC IndexManager::insertEntryInOverflowPage(IXFileHandle &ixfileHandle,PageNum cu
 		rc = ixfileHandle.fileHandle.writePage(currentNodePage,pageToProcess);//Write Page
 		if(rc != 0)
 			return rc;
+
 
 	}
 	return 0;
@@ -1102,6 +1103,8 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 			newChildNodeKey = NULL;
 			newChildNodePage = -1;
 
+
+
 		}
 		//Same key insertion and num of entry == 1 and no space means it requires overflow page.
 		else if(sameKey && (getNumOfEnt(pageToProcess) == 1))
@@ -1113,6 +1116,8 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 		//split
 		else
 		{
+
+
 
 			char newChildPageToProcess[PAGE_SIZE];
 			newChildNodePage = ixfileHandle.fileHandle.getNumberOfPages();
@@ -1133,24 +1138,6 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 			if(rc != 0)
 				return rc;
 
-
-//			int temptemp;
-//			getKeyOfEntry(entryToProcess,temptemp);
-//			if(temptemp == 338)
-//			{
-//				printf("sibal\n");
-//			}
-//			if(temptemp == 339)
-//			{
-//				printf("sibal\n");
-//			}
-//			if(temptemp == 340)
-//			{
-//				printf("sibal\n");
-//			}
-//
-//
-//			cout << "sibal\n";
 
 
 		}
