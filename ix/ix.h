@@ -10,7 +10,7 @@
 
 # define IX_EOF (-1)  // end of the index scan
 
-typedef signed short SlotOffset;
+typedef signed SlotOffset;
 typedef char NodeType;
 typedef unsigned short NumOfEnt;
 
