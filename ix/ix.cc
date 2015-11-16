@@ -975,7 +975,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 
 				newChildNodeKey = NULL;
 				newChildNodePage = -1;
-				printBtree(ixfileHandle,attribute);
+
 
 			}
 			//Not enough space : intermediate node split
@@ -1133,7 +1133,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 			if(rc != 0)
 				return rc;
 
-			/*
+
 			int temptemp;
 			getKeyOfEntry(entryToProcess,temptemp);
 			if(temptemp == 338)
@@ -1151,7 +1151,16 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 
 			cout << getFreeSpaceOffset(pageToProcess)<<"\t"<<getNumOfEnt(pageToProcess)<<"\t"<<getTombstone(pageToProcess)<<"\t"<<getNodeType(pageToProcess)<<"\t"<<getParentPageNum(pageToProcess)<<"\t"<<getLeftSiblingPageNum(pageToProcess)<<"\t"<<getRightSiblingPageNum(pageToProcess)<<"\t"<<getLeftMostChildPageNum(pageToProcess)<<endl;
 			cout << getFreeSpaceOffset(newChildPageToProcess)<<"\t"<<getNumOfEnt(newChildPageToProcess)<<"\t"<<getTombstone(newChildPageToProcess)<<"\t"<<getNodeType(newChildPageToProcess)<<"\t"<<getParentPageNum(newChildPageToProcess)<<"\t"<<getLeftSiblingPageNum(newChildPageToProcess)<<"\t"<<getRightSiblingPageNum(newChildPageToProcess)<<"\t"<<getLeftMostChildPageNum(newChildPageToProcess)<<endl;
-			 */
+			unsigned numOfEnt = getNumOfEnt(newChildPageToProcess);
+			char *entryToProcessTemp = newChildPageToProcess;
+			for(unsigned i = 0; i <  numOfEnt; i++)
+			{
+				string key;
+				getKeyOfEntry(entryToProcessTemp,key);
+				cout << key << endl;
+				entryToProcessTemp = entryToProcessTemp + getSizeOfEntryInLeaf(entryToProcessTemp,attribute.type);
+			}
+
 		}
 	}
 
