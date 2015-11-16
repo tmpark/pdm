@@ -1149,40 +1149,6 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 				printf("sibal\n");
 			}
 
-<<<<<<< HEAD
-			cout << getFreeSpaceOffset(pageToProcess)<<"\t"<<getNumOfEnt(pageToProcess)<<"\t"<<getTombstone(pageToProcess)<<"\t"<<getNodeType(pageToProcess)<<"\t"<<getParentPageNum(pageToProcess)<<"\t"<<getLeftSiblingPageNum(pageToProcess)<<"\t"<<getRightSiblingPageNum(pageToProcess)<<"\t"<<getLeftMostChildPageNum(pageToProcess)<<endl;
-			cout << getFreeSpaceOffset(newChildPageToProcess)<<"\t"<<getNumOfEnt(newChildPageToProcess)<<"\t"<<getTombstone(newChildPageToProcess)<<"\t"<<getNodeType(newChildPageToProcess)<<"\t"<<getParentPageNum(newChildPageToProcess)<<"\t"<<getLeftSiblingPageNum(newChildPageToProcess)<<"\t"<<getRightSiblingPageNum(newChildPageToProcess)<<"\t"<<getLeftMostChildPageNum(newChildPageToProcess)<<endl;
-
-			unsigned numOfEnt = getNumOfEnt(pageToProcess);
-			char *entryToProcessTemp = pageToProcess;
-			for(unsigned i = 0; i <  numOfEnt; i++)
-			{
-				string key;
-				getKeyOfEntry(entryToProcessTemp,key);
-				cout << key << endl;
-				unsigned numOfRid = getNumOfRIDsInLeafEntry(entryToProcessTemp,attribute.type) ;
-				for(unsigned j = 0 ; j < numOfRid; j++)
-				{
-					RID extracted;
-					getRIDInLeaf(entryToProcess,attribute.type,j,extracted);
-					cout << extracted.pageNum << '\t' << extracted.slotNum << endl << flush;
-
-				}
-				entryToProcessTemp = entryToProcessTemp + getSizeOfEntryInLeaf(entryToProcessTemp,attribute.type);
-			}
-=======
-//			cout << getFreeSpaceOffset(pageToProcess)<<"\t"<<getNumOfEnt(pageToProcess)<<"\t"<<getTombstone(pageToProcess)<<"\t"<<getNodeType(pageToProcess)<<"\t"<<getParentPageNum(pageToProcess)<<"\t"<<getLeftSiblingPageNum(pageToProcess)<<"\t"<<getRightSiblingPageNum(pageToProcess)<<"\t"<<getLeftMostChildPageNum(pageToProcess)<<endl;
-//			cout << getFreeSpaceOffset(newChildPageToProcess)<<"\t"<<getNumOfEnt(newChildPageToProcess)<<"\t"<<getTombstone(newChildPageToProcess)<<"\t"<<getNodeType(newChildPageToProcess)<<"\t"<<getParentPageNum(newChildPageToProcess)<<"\t"<<getLeftSiblingPageNum(newChildPageToProcess)<<"\t"<<getRightSiblingPageNum(newChildPageToProcess)<<"\t"<<getLeftMostChildPageNum(newChildPageToProcess)<<endl;
-//			unsigned numOfEnt = getNumOfEnt(newChildPageToProcess);
-//			char *entryToProcessTemp = newChildPageToProcess;
-//			for(unsigned i = 0; i <  numOfEnt; i++)
-//			{
-//				string key;
-//				getKeyOfEntry(entryToProcessTemp,key);
-//				cout << key << endl;
-//				entryToProcessTemp = entryToProcessTemp + getSizeOfEntryInLeaf(entryToProcessTemp,attribute.type);
-//			}
->>>>>>> 07d365439ab4141ee46282c124513a853b45227c
 
 			cout << "sibal\n";
 
@@ -1358,7 +1324,7 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 
 	//check whether we will add rid to existing entry or add new entry to node
 	bool newEntryNeeded = true;
-
+	int l = getNumOfEnt(leafNode);
 
 	char* entryToProcess = ((char *)leafNode) + offset;
 	if(Attribute.type == TypeInt)
@@ -1393,7 +1359,7 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 
 	if(newEntryNeeded)//create new entry and shift entries to new leaf node
 			{
-		char newEnt[400];
+		char newEnt[WHOLE_SIZE_FOR_ENTRIES];
 		char *newEntry = newEnt;
 		char *newEntryStartAddr = newEntry;
 		NumOfEnt numOfRIDs = 1;
@@ -1627,6 +1593,8 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 			}
 			leafNodeOffset += entSize;
 		}
+
+
 
 		//update second part of Page DIC
 		setRightSiblingPageNum(newLeafNode, getRightSiblingPageNum(leafNode));
