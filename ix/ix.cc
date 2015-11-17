@@ -1157,8 +1157,6 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 /*
 			cout << getFreeSpaceOffset(newChildPageToProcess)<<"\t"<<getNumOfEnt(newChildPageToProcess)<<"\t"<<getTombstone(newChildPageToProcess)<<"\t"<<getNodeType(newChildPageToProcess)<<"\t"<<getParentPageNum(newChildPageToProcess)<<"\t"<<getLeftSiblingPageNum(newChildPageToProcess)<<"\t"<<getRightSiblingPageNum(newChildPageToProcess)<<"\t"<<getLeftMostChildPageNum(newChildPageToProcess)<<endl;
 
-
-
 			printf("************************************child****************************************\n");
 
 			numOfEnt = getNumOfEnt(newChildPageToProcess);
@@ -1180,8 +1178,8 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 
 
 			printf("sibal\n");
-
 */
+
 
 		}
 	}
@@ -1366,7 +1364,7 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 		setTombstone(newLeafNode, -1);
 		setNumOfEnt(newLeafNode, 1);
 		setFreeSpaceOffset(newLeafNode,
-				getSizeOfEntryInLeaf(leafNode, Attribute.type));
+				getSizeOfEntryInLeaf(newLeafNode, Attribute.type));
 		setLeftMostChildPageNum(newLeafNode, -1);
 
 		//Write first part to existing leafNode and update Page DIC
