@@ -1116,7 +1116,22 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 		//split
 		else
 		{
-
+			unsigned numOfEnt = getNumOfEnt(pageToProcess);
+			char *entryToProcessTemp = pageToProcess;
+			for(unsigned i = 0; i <  numOfEnt; i++)
+			{
+				string key;
+				getKeyOfEntry(entryToProcessTemp,key);
+				cout << key << endl;
+				unsigned numOfRid = getNumOfRIDsInLeafEntry(entryToProcessTemp,attribute.type) ;
+				for(unsigned j = 0 ; j < numOfRid; j++)
+				{
+					RID extracted;
+					getRIDInLeaf(entryToProcessTemp,attribute.type,j,extracted);
+					cout << extracted.pageNum << '\t' << extracted.slotNum << endl << flush;
+				}
+				entryToProcessTemp = entryToProcessTemp + getSizeOfEntryInLeaf(entryToProcessTemp,attribute.type);
+			}
 
 
 			char newChildPageToProcess[PAGE_SIZE];
@@ -1142,8 +1157,12 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 			cout << getFreeSpaceOffset(pageToProcess)<<"\t"<<getNumOfEnt(pageToProcess)<<"\t"<<getTombstone(pageToProcess)<<"\t"<<getNodeType(pageToProcess)<<"\t"<<getParentPageNum(pageToProcess)<<"\t"<<getLeftSiblingPageNum(pageToProcess)<<"\t"<<getRightSiblingPageNum(pageToProcess)<<"\t"<<getLeftMostChildPageNum(pageToProcess)<<endl;
 			cout << getFreeSpaceOffset(newChildPageToProcess)<<"\t"<<getNumOfEnt(newChildPageToProcess)<<"\t"<<getTombstone(newChildPageToProcess)<<"\t"<<getNodeType(newChildPageToProcess)<<"\t"<<getParentPageNum(newChildPageToProcess)<<"\t"<<getLeftSiblingPageNum(newChildPageToProcess)<<"\t"<<getRightSiblingPageNum(newChildPageToProcess)<<"\t"<<getLeftMostChildPageNum(newChildPageToProcess)<<endl;
 
-			unsigned numOfEnt = getNumOfEnt(pageToProcess);
-			char *entryToProcessTemp = pageToProcess;
+
+
+			printf("************************************child****************************************\n");
+
+			numOfEnt = getNumOfEnt(newChildPageToProcess);
+			entryToProcessTemp = newChildPageToProcess;
 			for(unsigned i = 0; i <  numOfEnt; i++)
 			{
 				string key;
@@ -1158,7 +1177,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 				}
 				entryToProcessTemp = entryToProcessTemp + getSizeOfEntryInLeaf(entryToProcessTemp,attribute.type);
 			}
-			//printBtree(ixfileHandle,attribute);
+
 
 			printf("sibal\n");
 
