@@ -1133,7 +1133,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 				}
 				entryToProcessTemp = entryToProcessTemp + getSizeOfEntryInLeaf(entryToProcessTemp,attribute.type);
 			}
-*/
+			 */
 
 			char newChildPageToProcess[PAGE_SIZE];
 			newChildNodePage = ixfileHandle.fileHandle.getNumberOfPages();
@@ -1154,7 +1154,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 			if(rc != 0)
 				return rc;
 
-/*
+			/*
 			cout << getFreeSpaceOffset(newChildPageToProcess)<<"\t"<<getNumOfEnt(newChildPageToProcess)<<"\t"<<getTombstone(newChildPageToProcess)<<"\t"<<getNodeType(newChildPageToProcess)<<"\t"<<getParentPageNum(newChildPageToProcess)<<"\t"<<getLeftSiblingPageNum(newChildPageToProcess)<<"\t"<<getRightSiblingPageNum(newChildPageToProcess)<<"\t"<<getLeftMostChildPageNum(newChildPageToProcess)<<endl;
 
 
@@ -1181,7 +1181,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 
 			printf("sibal\n");
 
-*/
+			 */
 
 		}
 	}
@@ -1241,44 +1241,57 @@ RC IndexManager::splitIntermediate(void *interNode, void *newInterNode, void *ne
 	int numOfEntriesS = 0;
 	int freeSpaceOffset = getFreeSpaceOffset(interNode);
 	int newChildEntrySize = 0;
-	//	if(interNodeOffset != freeSpaceOffset)
-	//	{
-	char *newCEntryBuff = (char *)newChildEntry;
 
-	if(entryType == TypeInt)
+	char *newCEntryBuff = (char *)newChildEntry;
+	if(interNodeOffset != freeSpaceOffset)
 	{
-		setKeyOfEntry(newChildEntry,*(int *)(((char *)interNode) + interNodeOffset));
-		memcpy(newCEntryBuff + sizeof(int), &newInterNodePN, sizeof(PageNum));
-		//setLeftChild
-		int *pageNum = (int *)(((char *)interNode) + interNodeOffset + sizeof(int));
-		setLeftMostChildPageNum(secondPart, *pageNum);
-		newChildEntrySize = sizeof(int) + sizeof(PageNum);
-	}
-	else if(entryType == TypeReal)
-	{
-		setKeyOfEntry(newChildEntry,*(float *)(((char *)interNode) + interNodeOffset));
-		memcpy(newCEntryBuff + sizeof(float), &newInterNodePN, sizeof(PageNum));
-		int *pageNum = (int *)(((char *)interNode) + interNodeOffset + sizeof(float));
-		setLeftMostChildPageNum(secondPart, *pageNum);
-		newChildEntrySize = sizeof(float) + sizeof(PageNum);
+		putEntryInItermediate(newChildEntry, entryType, (((char *)interNode) + interNodeOffset), newInterNodePN);
 	}
 	else
 	{
-		string k = extractVarChar(((char *)interNode) + interNodeOffset);
-		int kLength = k.length();
-		char *newCEntryBuff = (char *)newChildEntry;
-		memcpy(newCEntryBuff, &kLength, 4);
-		memcpy(newCEntryBuff + 4, k.c_str(), kLength);
-		memcpy(newCEntryBuff + 4 + kLength, &newInterNodePN, sizeof(PageNum));
-		int *pageNum = (int *)(((char *)interNode) + interNodeOffset + sizeof(int) + kLength);
-		newChildEntrySize = sizeof(int) + kLength + sizeof(PageNum);
-		setLeftMostChildPageNum(secondPart, *pageNum);
+		memcpy(newChildEntry, entry, newEntrySize);
 	}
+	newChildEntrySize = getSizeOfEntryInIntermediate(newChildEntry, entryType);
+	setLeftMostChildPageNum(secondPart,	*(int *)(newCEntryBuff + newChildEntrySize - 4));
+
+	//	//	if(interNodeOffset != freeSpaceOffset)
+	//	//	{
+	//	char *newCEntryBuff = (char *)newChildEntry;
+	//
+	//	if(entryType == TypeInt)
+	//	{
+	//		setKeyOfEntry(newChildEntry,*(int *)(((char *)interNode) + interNodeOffset));
+	//		memcpy(newCEntryBuff + sizeof(int), &newInterNodePN, sizeof(PageNum));
+	//		//setLeftChild
+	//		int *pageNum = (int *)(((char *)interNode) + interNodeOffset + sizeof(int));
+	//		setLeftMostChildPageNum(secondPart, *pageNum);
+	//		newChildEntrySize = sizeof(int) + sizeof(PageNum);
+	//	}
+	//	else if(entryType == TypeReal)
+	//	{
+	//		setKeyOfEntry(newChildEntry,*(float *)(((char *)interNode) + interNodeOffset));
+	//		memcpy(newCEntryBuff + sizeof(float), &newInterNodePN, sizeof(PageNum));
+	//		int *pageNum = (int *)(((char *)interNode) + interNodeOffset + sizeof(float));
+	//		setLeftMostChildPageNum(secondPart, *pageNum);
+	//		newChildEntrySize = sizeof(float) + sizeof(PageNum);
 	//	}
 	//	else
 	//	{
-	//		cout << "ERROR splitINTER" << endl;
+	//		string k = extractVarChar(((char *)interNode) + interNodeOffset);
+	//		int kLength = k.length();
+	//		char *newCEntryBuff = (char *)newChildEntry;
+	//		memcpy(newCEntryBuff, &kLength, 4);
+	//		memcpy(newCEntryBuff + 4, k.c_str(), kLength);
+	//		memcpy(newCEntryBuff + 4 + kLength, &newInterNodePN, sizeof(PageNum));
+	//		int *pageNum = (int *)(((char *)interNode) + interNodeOffset + sizeof(int) + kLength);
+	//		newChildEntrySize = sizeof(int) + kLength + sizeof(PageNum);
+	//		setLeftMostChildPageNum(secondPart, *pageNum);
 	//	}
+	//	//	}
+	//	//	else
+	//	//	{
+	//	//		cout << "ERROR splitINTER" << endl;
+	//	//	}
 
 	//Create new inter node
 	inserted = false;
@@ -1355,9 +1368,11 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 	//check whether we will add rid to existing entry or add new entry to node
 	bool newEntryNeeded = true;
 
+	//FIXME
 	if(getNumOfEnt(leafNode) == 1)
 	{
 		putEntryInLeaf(newLeafNode,Attribute.type, key, rid, false);
+		putEntryInItermediate(newChildEntry, Attribute.type, key, newLeafNodePN);
 		//update second part of Page DIC
 		setRightSiblingPageNum(newLeafNode, getRightSiblingPageNum(leafNode));
 		setLeftSiblingPageNum(newLeafNode, LeafNodePN);
@@ -1366,7 +1381,7 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 		setTombstone(newLeafNode, -1);
 		setNumOfEnt(newLeafNode, 1);
 		setFreeSpaceOffset(newLeafNode,
-				getSizeOfEntryInLeaf(leafNode, Attribute.type));
+				getSizeOfEntryInLeaf(newLeafNode, Attribute.type));
 		setLeftMostChildPageNum(newLeafNode, -1);
 
 		//Write first part to existing leafNode and update Page DIC
@@ -1473,38 +1488,20 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 			leafNodeOffset += entSize;
 		}
 
+
 		//Create newChildNode
 		int numOfEntriesS = 0;
 		int freeSpaceOffset = getFreeSpaceOffset(leafNode);
-		//		if(leafNodeOffset != freeSpaceOffset)
-		//		{
-		char *newCEntryBuff = (char *)newChildEntry;
 
-		if(Attribute.type == TypeInt)
+		if(leafNodeOffset != freeSpaceOffset)
 		{
-			setKeyOfEntry(newChildEntry,*(int *)(((char *)leafNode) + leafNodeOffset));
-			memcpy(newCEntryBuff + sizeof(int), &newLeafNodePN, sizeof(PageNum));
-		}
-		else if(Attribute.type == TypeReal)
-		{
-			setKeyOfEntry(newChildEntry,*(float *)(((char *)leafNode) + leafNodeOffset));
-			memcpy(newCEntryBuff + sizeof(float), &newLeafNodePN, sizeof(PageNum));
+			putEntryInItermediate(newChildEntry, Attribute.type, (((char *)leafNode) + leafNodeOffset), newLeafNodePN);
 		}
 		else
 		{
-			string k = extractVarChar(((char *)leafNode) + leafNodeOffset);
-			int kLength = k.length();
-			char *newCEntryBuff = (char *)newChildEntry;
-			memcpy(newCEntryBuff, &kLength, 4);
-			memcpy(newCEntryBuff + 4, k.c_str(), kLength);
-			memcpy(newCEntryBuff + 4 + kLength, &newLeafNodePN, sizeof(PageNum));
+			putEntryInItermediate(newChildEntry, Attribute.type, key, newLeafNodePN);
 		}
-		//		}
-	//		else
-		//		{
-		//			cout << "ERROR: if(new entry)" << endl;
-		//			return -1; //means that we did not split and probably it will cause an error.
-		//		}
+
 		//Create new leaf node
 		inserted = false;
 		while(leafNodeOffset != freeSpaceOffset)
@@ -1589,33 +1586,41 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 
 		}
 
+
 		//Create newChildNode
 		int freeSpaceOffset = getFreeSpaceOffset(leafNode);
-		//		if(leafNodeOffset != freeSpaceOffset)
-		//		{
-		char *newCEntryBuff = (char *)newChildEntry;
+		putEntryInItermediate(newChildEntry, Attribute.type,
+				(((char *)leafNode) + leafNodeOffset), newLeafNodePN);
 
-		if(Attribute.type == TypeInt)
-		{
-			setKeyOfEntry(newChildEntry,*(int *)(((char *)leafNode) + leafNodeOffset));
-			memcpy(newCEntryBuff + sizeof(int), &newLeafNodePN, sizeof(PageNum));
-		}
-		else if(Attribute.type == TypeReal)
-		{
-			setKeyOfEntry(newChildEntry,*(float *)(((char *)leafNode) + leafNodeOffset));
-			memcpy(newCEntryBuff + sizeof(float), &newLeafNodePN, sizeof(PageNum));
-		}
-		else
-		{
-			string k = extractVarChar(((char *)leafNode) + leafNodeOffset);
-			int kLength = k.length();
-			char *newCEntryBuff = (char *)newChildEntry;
-			memcpy(newCEntryBuff, &kLength, 4);
-			memcpy(newCEntryBuff + 4, k.c_str(), kLength);
-			memcpy(newCEntryBuff + 4 + kLength, &newLeafNodePN, sizeof(PageNum));
-		}
+
+
+		//		//Create newChildNode
+		//		int freeSpaceOffset = getFreeSpaceOffset(leafNode);
+		//		//		if(leafNodeOffset != freeSpaceOffset)
+		//		//		{
+		//		char *newCEntryBuff = (char *)newChildEntry;
+		//
+		//		if(Attribute.type == TypeInt)
+		//		{
+		//			setKeyOfEntry(newChildEntry,*(int *)(((char *)leafNode) + leafNodeOffset));
+		//			memcpy(newCEntryBuff + sizeof(int), &newLeafNodePN, sizeof(PageNum));
 		//		}
-	//		else
+		//		else if(Attribute.type == TypeReal)
+		//		{
+		//			setKeyOfEntry(newChildEntry,*(float *)(((char *)leafNode) + leafNodeOffset));
+		//			memcpy(newCEntryBuff + sizeof(float), &newLeafNodePN, sizeof(PageNum));
+		//		}
+		//		else
+		//		{
+		//			string k = extractVarChar(((char *)leafNode) + leafNodeOffset);
+		//			int kLength = k.length();
+		//			char *newCEntryBuff = (char *)newChildEntry;
+		//			memcpy(newCEntryBuff, &kLength, 4);
+		//			memcpy(newCEntryBuff + 4, k.c_str(), kLength);
+		//			memcpy(newCEntryBuff + 4 + kLength, &newLeafNodePN, sizeof(PageNum));
+		//		}
+		//		}
+		//		else
 		//		{
 		//			cout << "ERROR: else" << endl;
 		//			return -1; //means that we did not split and probably it will cause an error.
