@@ -1356,6 +1356,7 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 	if(getNumOfEnt(leafNode) == 1)
 	{
 		putEntryInLeaf(newLeafNode,Attribute.type, key, rid, false);
+
 		//update second part of Page DIC
 		setRightSiblingPageNum(newLeafNode, getRightSiblingPageNum(leafNode));
 		setLeftSiblingPageNum(newLeafNode, LeafNodePN);
