@@ -1061,7 +1061,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 		PageNum tombstone = getTombstone(pageToProcess);
 
 		//Overflowed Node: go inside overflow page and return null
-		if(tombstone != -1)
+		if((tombstone != -1) && sameKey)
 		{
 			rc = insertEntryInOverflowPage(ixfileHandle,currentNodePage,pageToProcess,rid);
 			newChildNodeKey = NULL;
@@ -1116,6 +1116,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 		//split
 		else
 		{
+			/*
 			unsigned numOfEnt = getNumOfEnt(pageToProcess);
 			char *entryToProcessTemp = pageToProcess;
 			for(unsigned i = 0; i <  numOfEnt; i++)
@@ -1132,7 +1133,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 				}
 				entryToProcessTemp = entryToProcessTemp + getSizeOfEntryInLeaf(entryToProcessTemp,attribute.type);
 			}
-
+*/
 
 			char newChildPageToProcess[PAGE_SIZE];
 			newChildNodePage = ixfileHandle.fileHandle.getNumberOfPages();
@@ -1153,8 +1154,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 			if(rc != 0)
 				return rc;
 
-
-			cout << getFreeSpaceOffset(pageToProcess)<<"\t"<<getNumOfEnt(pageToProcess)<<"\t"<<getTombstone(pageToProcess)<<"\t"<<getNodeType(pageToProcess)<<"\t"<<getParentPageNum(pageToProcess)<<"\t"<<getLeftSiblingPageNum(pageToProcess)<<"\t"<<getRightSiblingPageNum(pageToProcess)<<"\t"<<getLeftMostChildPageNum(pageToProcess)<<endl;
+/*
 			cout << getFreeSpaceOffset(newChildPageToProcess)<<"\t"<<getNumOfEnt(newChildPageToProcess)<<"\t"<<getTombstone(newChildPageToProcess)<<"\t"<<getNodeType(newChildPageToProcess)<<"\t"<<getParentPageNum(newChildPageToProcess)<<"\t"<<getLeftSiblingPageNum(newChildPageToProcess)<<"\t"<<getRightSiblingPageNum(newChildPageToProcess)<<"\t"<<getLeftMostChildPageNum(newChildPageToProcess)<<endl;
 
 
@@ -1181,6 +1181,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 
 			printf("sibal\n");
 
+*/
 
 		}
 	}
@@ -1240,8 +1241,8 @@ RC IndexManager::splitIntermediate(void *interNode, void *newInterNode, void *ne
 	int numOfEntriesS = 0;
 	int freeSpaceOffset = getFreeSpaceOffset(interNode);
 	int newChildEntrySize = 0;
-	if(interNodeOffset != freeSpaceOffset)
-	{
+//	if(interNodeOffset != freeSpaceOffset)
+//	{
 		char *newCEntryBuff = (char *)newChildEntry;
 
 		if(entryType == TypeInt)
@@ -1273,11 +1274,11 @@ RC IndexManager::splitIntermediate(void *interNode, void *newInterNode, void *ne
 			newChildEntrySize = sizeof(int) + kLength + sizeof(PageNum);
 			setLeftMostChildPageNum(secondPart, *pageNum);
 		}
-	}
-	else
-	{
-		cout << "ERROR splitINTER" << endl;
-	}
+//	}
+//	else
+//	{
+//		cout << "ERROR splitINTER" << endl;
+//	}
 
 	//Create new inter node
 	inserted = false;
@@ -1437,18 +1438,18 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 				continue;
 			}
 			entSize = getSizeOfEntryInLeaf(((char *)leafNode) + leafNodeOffset, Attribute.type);
-			if(leafNodeOffset + entSize > WHOLE_SIZE_FOR_ENTRIES)
+			if(firstPartOffset + entSize > WHOLE_SIZE_FOR_ENTRIES)
 			{
 				numOfEntriesF--;
 				break; //Nice and easy solution to special case where last entry to
 				//this node is very big so that it causes overflow in the node and
 				//writes to page dic.
 			}
-			if(firstPartOffset + entSize > WHOLE_SIZE_FOR_ENTRIES)
-			{
-				numOfEntriesF--;
-				break;
-			}
+//			if(firstPartOffset + entSize > WHOLE_SIZE_FOR_ENTRIES)
+//			{
+//				numOfEntriesF--;
+//				break;
+//			}
 			memcpy(firstPart + firstPartOffset, ((char *)leafNode) + leafNodeOffset, entSize);
 			firstPartOffset += entSize;
 			leafNodeOffset += entSize;
@@ -1457,8 +1458,8 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 		//Create newChildNode
 		int numOfEntriesS = 0;
 		int freeSpaceOffset = getFreeSpaceOffset(leafNode);
-		if(leafNodeOffset != freeSpaceOffset)
-		{
+//		if(leafNodeOffset != freeSpaceOffset)
+//		{
 			char *newCEntryBuff = (char *)newChildEntry;
 
 			if(Attribute.type == TypeInt)
@@ -1480,12 +1481,12 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 				memcpy(newCEntryBuff + 4, k.c_str(), kLength);
 				memcpy(newCEntryBuff + 4 + kLength, &newLeafNodePN, sizeof(PageNum));
 			}
-		}
-		else
-		{
-			cout << "ERROR: if(new entry)" << endl;
-			return -1; //means that we did not split and probably it will cause an error.
-		}
+//		}
+//		else
+//		{
+//			cout << "ERROR: if(new entry)" << endl;
+//			return -1; //means that we did not split and probably it will cause an error.
+//		}
 		//Create new leaf node
 		inserted = false;
 		while(leafNodeOffset != freeSpaceOffset)
@@ -1572,8 +1573,8 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 
 		//Create newChildNode
 		int freeSpaceOffset = getFreeSpaceOffset(leafNode);
-		if(leafNodeOffset != freeSpaceOffset)
-		{
+//		if(leafNodeOffset != freeSpaceOffset)
+//		{
 			char *newCEntryBuff = (char *)newChildEntry;
 
 			if(Attribute.type == TypeInt)
@@ -1595,12 +1596,12 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 				memcpy(newCEntryBuff + 4, k.c_str(), kLength);
 				memcpy(newCEntryBuff + 4 + kLength, &newLeafNodePN, sizeof(PageNum));
 			}
-		}
-		else
-		{
-			cout << "ERROR: else" << endl;
-			return -1; //means that we did not split and probably it will cause an error.
-		}
+//		}
+//		else
+//		{
+//			cout << "ERROR: else" << endl;
+//			return -1; //means that we did not split and probably it will cause an error.
+//		}
 		//Create new leaf node
 		int numOfEntriesS = 0;
 		while(leafNodeOffset != freeSpaceOffset)
@@ -1611,11 +1612,16 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 			secondPartOffset += entSize;
 			if(leafNodeOffset == offset)
 			{
+				int y = getNumOfRIDsInLeafEntry(secondPart + secondPartOffset - entSize, Attribute.type);
+
 				setNumOfRIDsInLeaf(secondPart + secondPartOffset - entSize, Attribute.type,
 						getNumOfRIDsInLeafEntry(secondPart + secondPartOffset - entSize, Attribute.type) + 1);
-				memcpy(firstPart + secondPartOffset, &(rid.pageNum), sizeof(PageNum));
+
+				int x = getNumOfRIDsInLeafEntry(secondPart + secondPartOffset - entSize, Attribute.type);
+
+				memcpy(secondPart + secondPartOffset, &(rid.pageNum), sizeof(PageNum));
 				secondPartOffset += sizeof(PageNum);
-				memcpy(firstPart + secondPartOffset, &(rid.slotNum), sizeof(SlotOffset));
+				memcpy(secondPart + secondPartOffset, &(rid.slotNum), sizeof(SlotOffset));
 				secondPartOffset += sizeof(SlotOffset);
 				leafNodeOffset += entSize;
 				continue;
