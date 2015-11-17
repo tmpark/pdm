@@ -1198,8 +1198,8 @@ RC IndexManager::splitIntermediate(void *interNode, void *newInterNode, void *ne
 	int numOfEntriesS = 0;
 	int freeSpaceOffset = getFreeSpaceOffset(interNode);
 	int newChildEntrySize = 0;
-	if(interNodeOffset != freeSpaceOffset)
-	{
+//	if(interNodeOffset != freeSpaceOffset)
+//	{
 		char *newCEntryBuff = (char *)newChildEntry;
 
 		if(entryType == TypeInt)
@@ -1231,11 +1231,11 @@ RC IndexManager::splitIntermediate(void *interNode, void *newInterNode, void *ne
 			newChildEntrySize = sizeof(int) + kLength + sizeof(PageNum);
 			setLeftMostChildPageNum(secondPart, *pageNum);
 		}
-	}
-	else
-	{
-		cout << "ERROR splitINTER" << endl;
-	}
+//	}
+//	else
+//	{
+//		cout << "ERROR splitINTER" << endl;
+//	}
 
 	//Create new inter node
 	inserted = false;
@@ -1395,18 +1395,18 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 				continue;
 			}
 			entSize = getSizeOfEntryInLeaf(((char *)leafNode) + leafNodeOffset, Attribute.type);
-			if(leafNodeOffset + entSize > WHOLE_SIZE_FOR_ENTRIES)
+			if(firstPartOffset + entSize > WHOLE_SIZE_FOR_ENTRIES)
 			{
 				numOfEntriesF--;
 				break; //Nice and easy solution to special case where last entry to
 				//this node is very big so that it causes overflow in the node and
 				//writes to page dic.
 			}
-			if(firstPartOffset + entSize > WHOLE_SIZE_FOR_ENTRIES)
-			{
-				numOfEntriesF--;
-				break;
-			}
+//			if(firstPartOffset + entSize > WHOLE_SIZE_FOR_ENTRIES)
+//			{
+//				numOfEntriesF--;
+//				break;
+//			}
 			memcpy(firstPart + firstPartOffset, ((char *)leafNode) + leafNodeOffset, entSize);
 			firstPartOffset += entSize;
 			leafNodeOffset += entSize;
@@ -1415,8 +1415,8 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 		//Create newChildNode
 		int numOfEntriesS = 0;
 		int freeSpaceOffset = getFreeSpaceOffset(leafNode);
-		if(leafNodeOffset != freeSpaceOffset)
-		{
+//		if(leafNodeOffset != freeSpaceOffset)
+//		{
 			char *newCEntryBuff = (char *)newChildEntry;
 
 			if(Attribute.type == TypeInt)
@@ -1438,12 +1438,12 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 				memcpy(newCEntryBuff + 4, k.c_str(), kLength);
 				memcpy(newCEntryBuff + 4 + kLength, &newLeafNodePN, sizeof(PageNum));
 			}
-		}
-		else
-		{
-			cout << "ERROR: if(new entry)" << endl;
-			return -1; //means that we did not split and probably it will cause an error.
-		}
+//		}
+//		else
+//		{
+//			cout << "ERROR: if(new entry)" << endl;
+//			return -1; //means that we did not split and probably it will cause an error.
+//		}
 		//Create new leaf node
 		inserted = false;
 		while(leafNodeOffset != freeSpaceOffset)
@@ -1530,8 +1530,8 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 
 		//Create newChildNode
 		int freeSpaceOffset = getFreeSpaceOffset(leafNode);
-		if(leafNodeOffset != freeSpaceOffset)
-		{
+//		if(leafNodeOffset != freeSpaceOffset)
+//		{
 			char *newCEntryBuff = (char *)newChildEntry;
 
 			if(Attribute.type == TypeInt)
@@ -1553,12 +1553,12 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 				memcpy(newCEntryBuff + 4, k.c_str(), kLength);
 				memcpy(newCEntryBuff + 4 + kLength, &newLeafNodePN, sizeof(PageNum));
 			}
-		}
-		else
-		{
-			cout << "ERROR: else" << endl;
-			return -1; //means that we did not split and probably it will cause an error.
-		}
+//		}
+//		else
+//		{
+//			cout << "ERROR: else" << endl;
+//			return -1; //means that we did not split and probably it will cause an error.
+//		}
 		//Create new leaf node
 		int numOfEntriesS = 0;
 		while(leafNodeOffset != freeSpaceOffset)
