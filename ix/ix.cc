@@ -1061,7 +1061,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 		PageNum tombstone = getTombstone(pageToProcess);
 
 		//Overflowed Node: go inside overflow page and return null
-		if(tombstone != -1)
+		if((tombstone != -1) && sameKey)
 		{
 			rc = insertEntryInOverflowPage(ixfileHandle,currentNodePage,pageToProcess,rid);
 			newChildNodeKey = NULL;
@@ -1116,8 +1116,24 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 		//split
 		else
 		{
-
-
+			/*
+			unsigned numOfEnt = getNumOfEnt(pageToProcess);
+			char *entryToProcessTemp = pageToProcess;
+			for(unsigned i = 0; i <  numOfEnt; i++)
+			{
+				string key;
+				getKeyOfEntry(entryToProcessTemp,key);
+				cout << key << endl;
+				unsigned numOfRid = getNumOfRIDsInLeafEntry(entryToProcessTemp,attribute.type) ;
+				for(unsigned j = 0 ; j < numOfRid; j++)
+				{
+					RID extracted;
+					getRIDInLeaf(entryToProcessTemp,attribute.type,j,extracted);
+					cout << extracted.pageNum << '\t' << extracted.slotNum << endl << flush;
+				}
+				entryToProcessTemp = entryToProcessTemp + getSizeOfEntryInLeaf(entryToProcessTemp,attribute.type);
+			}
+*/
 
 			char newChildPageToProcess[PAGE_SIZE];
 			newChildNodePage = ixfileHandle.fileHandle.getNumberOfPages();
@@ -1138,7 +1154,34 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 			if(rc != 0)
 				return rc;
 
+/*
+			cout << getFreeSpaceOffset(newChildPageToProcess)<<"\t"<<getNumOfEnt(newChildPageToProcess)<<"\t"<<getTombstone(newChildPageToProcess)<<"\t"<<getNodeType(newChildPageToProcess)<<"\t"<<getParentPageNum(newChildPageToProcess)<<"\t"<<getLeftSiblingPageNum(newChildPageToProcess)<<"\t"<<getRightSiblingPageNum(newChildPageToProcess)<<"\t"<<getLeftMostChildPageNum(newChildPageToProcess)<<endl;
 
+
+
+			printf("************************************child****************************************\n");
+
+			numOfEnt = getNumOfEnt(newChildPageToProcess);
+			entryToProcessTemp = newChildPageToProcess;
+			for(unsigned i = 0; i <  numOfEnt; i++)
+			{
+				string key;
+				getKeyOfEntry(entryToProcessTemp,key);
+				cout << key << endl;
+				unsigned numOfRid = getNumOfRIDsInLeafEntry(entryToProcessTemp,attribute.type) ;
+				for(unsigned j = 0 ; j < numOfRid; j++)
+				{
+					RID extracted;
+					getRIDInLeaf(entryToProcessTemp,attribute.type,j,extracted);
+					cout << extracted.pageNum << '\t' << extracted.slotNum << endl << flush;
+				}
+				entryToProcessTemp = entryToProcessTemp + getSizeOfEntryInLeaf(entryToProcessTemp,attribute.type);
+			}
+
+
+			printf("sibal\n");
+
+*/
 
 		}
 	}
