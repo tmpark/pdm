@@ -1546,8 +1546,16 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 
 		//update second part of Page DIC
 		setRightSiblingPageNum(newLeafNode, getRightSiblingPageNum(leafNode));
-		setLeftSiblingPageNum(newLeafNode, LeafNodePN);
-		setParentPageNum(newLeafNode, getParentPageNum(leafNode));
+		if(LeafNodePN == 0)
+		{
+			setLeftSiblingPageNum(newLeafNode, newLeafNodePN);
+			setParentPageNum(newLeafNode, 0);
+		}
+		else
+		{
+			setLeftSiblingPageNum(newLeafNode, LeafNodePN);
+			setParentPageNum(newLeafNode, getParentPageNum(leafNode));
+		}
 		setNodeType(newLeafNode, LEAF_NODE);
 		setTombstone(newLeafNode, -1);
 		setNumOfEnt(newLeafNode, (NumOfEnt)numOfEntriesS);
@@ -1556,7 +1564,27 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 
 		//Write first part to existing leafNode and update Page DIC
 		memcpy(leafNode, firstPart, firstPartOffset);
-		setRightSiblingPageNum(leafNode, newLeafNodePN);
+		if(LeafNodePN == 0)
+		{
+			setRightSiblingPageNum(leafNode, newLeafNodePN + 1);
+			setParentPageNum(leafNode, 0);
+
+			setLeftMostChildPageNum(newChildEntry, LeafNodePN);
+			setRightSiblingPageNum(newChildEntry, -1);
+			setLeftSiblingPageNum(newChildEntry, -1);
+			setParentPageNum(newChildEntry, -1);
+			//FIXME: should I set newChildEntry to NULL???
+			setNodeType(newChildEntry, INTER_NODE);
+			setTombstone(newChildEntry, -1);
+			setNumOfEnt(newChildEntry, 1);
+			setFreeSpaceOffset(newChildEntry,
+					getSizeOfEntryInIntermediate(newChildEntry, Attribute.type));
+
+		}
+		else
+		{
+			setRightSiblingPageNum(leafNode, newLeafNodePN);
+		}
 		setNumOfEnt(leafNode, (NumOfEnt)numOfEntriesF);
 		setFreeSpaceOffset(leafNode,(SlotOffset) firstPartOffset);
 	}
@@ -1668,12 +1696,18 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 			leafNodeOffset += entSize;
 		}
 
-
-
 		//update second part of Page DIC
 		setRightSiblingPageNum(newLeafNode, getRightSiblingPageNum(leafNode));
-		setLeftSiblingPageNum(newLeafNode, LeafNodePN);
-		setParentPageNum(newLeafNode, getParentPageNum(leafNode));
+		if(LeafNodePN == 0)
+		{
+			setLeftSiblingPageNum(newLeafNode, newLeafNodePN);
+			setParentPageNum(newLeafNode, 0);
+		}
+		else
+		{
+			setLeftSiblingPageNum(newLeafNode, LeafNodePN);
+			setParentPageNum(newLeafNode, getParentPageNum(leafNode));
+		}
 		setNodeType(newLeafNode, LEAF_NODE);
 		setTombstone(newLeafNode, -1);
 		setNumOfEnt(newLeafNode, (NumOfEnt)numOfEntriesS);
@@ -1682,7 +1716,27 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 
 		//Write first part to existing leafNode and update Page DIC
 		memcpy(leafNode, firstPart, firstPartOffset);
-		setRightSiblingPageNum(leafNode, newLeafNodePN);
+		if(LeafNodePN == 0)
+		{
+			setRightSiblingPageNum(leafNode, newLeafNodePN + 1);
+			setParentPageNum(leafNode, 0);
+
+			setLeftMostChildPageNum(newChildEntry, LeafNodePN);
+			setRightSiblingPageNum(newChildEntry, -1);
+			setLeftSiblingPageNum(newChildEntry, -1);
+			setParentPageNum(newChildEntry, -1);
+			//FIXME: should I set newChildEntry to NULL???
+			setNodeType(newChildEntry, INTER_NODE);
+			setTombstone(newChildEntry, -1);
+			setNumOfEnt(newChildEntry, 1);
+			setFreeSpaceOffset(newChildEntry,
+					getSizeOfEntryInIntermediate(newChildEntry, Attribute.type));
+
+		}
+		else
+		{
+			setRightSiblingPageNum(leafNode, newLeafNodePN);
+		}
 		setNumOfEnt(leafNode, (NumOfEnt)numOfEntriesF);
 		setFreeSpaceOffset(leafNode,(SlotOffset) firstPartOffset);
 
@@ -1934,7 +1988,14 @@ void IndexManager::printBtree(IXFileHandle &ixfileHandle, const Attribute &attri
 
 	char node[PAGE_SIZE];
 	ixfileHandle.fileHandle.readPage(0, node);
-	_printBtree(ixfileHandle, attribute, 0, node, 0, true);
+	if(getNodeType(node) == LEAF_NODE)
+	{
+		_printLeafNode(ixfileHandle, attribute, 0, node, 0, true);
+	}
+	else
+	{
+		_printBtree(ixfileHandle, attribute, 0, node, 0, true);
+	}
 }
 
 
