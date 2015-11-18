@@ -1511,11 +1511,17 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 
 		if(leafNodeOffset != freeSpaceOffset)
 		{
-			putEntryInItermediate(newChildEntry, Attribute.type, (((char *)leafNode) + leafNodeOffset), newLeafNodePN);
+			if(LeafNodePN == 0)
+				putEntryInItermediate(newChildEntry, Attribute.type, (((char *)leafNode) + leafNodeOffset), newLeafNodePN + 1);
+			else
+				putEntryInItermediate(newChildEntry, Attribute.type, (((char *)leafNode) + leafNodeOffset), newLeafNodePN);
 		}
 		else
 		{
-			putEntryInItermediate(newChildEntry, Attribute.type, key, newLeafNodePN);
+			if(LeafNodePN == 0)
+				putEntryInItermediate(newChildEntry, Attribute.type, key, newLeafNodePN + 1);
+			else
+				putEntryInItermediate(newChildEntry, Attribute.type, key, newLeafNodePN);
 		}
 
 		//Create new leaf node
@@ -1633,8 +1639,12 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 
 		//Create newChildNode
 		int freeSpaceOffset = getFreeSpaceOffset(leafNode);
-		putEntryInItermediate(newChildEntry, Attribute.type,
-				(((char *)leafNode) + leafNodeOffset), newLeafNodePN);
+		if(LeafNodePN == 0)
+			putEntryInItermediate(newChildEntry, Attribute.type,
+					(((char *)leafNode) + leafNodeOffset), newLeafNodePN + 1);
+		else
+			putEntryInItermediate(newChildEntry, Attribute.type,
+					(((char *)leafNode) + leafNodeOffset), newLeafNodePN);
 
 
 
