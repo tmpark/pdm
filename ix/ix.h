@@ -150,7 +150,7 @@ private:
 
 	RC splitLeaf(void *leafNode, void *newLeafNode, void * newChildEntry,
 			PageNum leafNodePN, PageNum newLeafNodePN,
-			int offset, const Attribute &Attribute, const void *key, const RID &rid);
+			int offset, const Attribute &Attribute, const void *key, const RID &rid, bool newEntryNeeded);
 	RC splitIntermediate(void *interNode, void *newInterNode, void *newRootNode,
 			void *newChildEntry, void *entry, const AttrType entryType, PageNum interNodePN,
 			PageNum newInterNodePN, int offset);
