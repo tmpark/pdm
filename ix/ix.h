@@ -135,7 +135,7 @@ public:
 	RC putEntryInLeaf(void *entryToProcess, AttrType attrType, const void *key, RID rid, bool existing);
 
 
-	RC insertEntryInOverflowPage(IXFileHandle &ixfileHandle,PageNum currentNodePage,void *pageToProcess,const RID &rid);
+	RC insertEntryInOverflowPage(IXFileHandle &ixfileHandle,PageNum currentNodePage,void *pageToProcess,const RID &rid, AttrType attrType);
 	RC deleteEntryInOverflowPage(IXFileHandle &ixfileHandle,PageNum currentNodePage,void *pageToProcess,const RID &rid);
 
 	char tempPage[PAGE_SIZE];

@@ -772,11 +772,26 @@ RC IndexManager::putEntryInLeaf(void *entryToProcess, AttrType attrType, const v
 
 }
 
-RC IndexManager::insertEntryInOverflowPage(IXFileHandle &ixfileHandle,PageNum currentNodePage,void *pageToProcess,const RID &rid)
+RC IndexManager::insertEntryInOverflowPage(IXFileHandle &ixfileHandle,PageNum currentNodePage,void *pageToProcess,const RID &rid, AttrType attrType)
 {
 	RC rc = -1;
 	PageNum tombstone = getTombstone(pageToProcess);
 	NodeType nodeType = getNodeType(pageToProcess);
+
+	if(nodeType == OVER_NODE)
+	{
+		unsigned numOfRids = getNumOfRIDsInLeafEntry(pageToProcess,attrType);
+		for(unsigned i = 0 ; i < numOfRids ; i++)
+		{
+			RID extractedRID;
+			getRIDInOverFlowPage(pageToProcess,i,extractedRID);
+			if(extractedRID.pageNum == rid.pageNum && extractedRID.slotNum == rid.slotNum)
+			{
+				return -1;
+			}
+		}
+
+	}
 
 	//go to another overflow page
 	if(tombstone != -1)
@@ -786,7 +801,9 @@ RC IndexManager::insertEntryInOverflowPage(IXFileHandle &ixfileHandle,PageNum cu
 		rc = ixfileHandle.fileHandle.readPage(tombstone,overFlowPageToProcess);//Read Page
 		if(rc != 0)
 			return rc;
-		insertEntryInOverflowPage(ixfileHandle,tombstone,overFlowPageToProcess,rid);
+		rc = insertEntryInOverflowPage(ixfileHandle,tombstone,overFlowPageToProcess,rid, attrType);
+		if(rc == -1)
+			return rc;
 	}
 	//insert here
 	else
@@ -820,7 +837,8 @@ RC IndexManager::insertEntryInOverflowPage(IXFileHandle &ixfileHandle,PageNum cu
 			rc = ixfileHandle.fileHandle.appendPage(overFlowPageToProcess);
 			if(rc != 0)
 				return rc;
-			rc = insertEntryInOverflowPage(ixfileHandle,anotherOverFlowPage,overFlowPageToProcess, rid);
+			rc = insertEntryInOverflowPage(ixfileHandle,anotherOverFlowPage,overFlowPageToProcess, rid, attrType);
+
 			rc =setTombstone(pageToProcess,anotherOverFlowPage);
 		}
 		//writePage to update tombstone
@@ -830,7 +848,7 @@ RC IndexManager::insertEntryInOverflowPage(IXFileHandle &ixfileHandle,PageNum cu
 
 
 	}
-	return 0;
+	return rc;
 
 }
 
@@ -1047,7 +1065,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 			offsetToPush = entryOffset + getSizeOfEntryInLeaf(entryToProcess,attribute.type);
 		}
 
-		//There is already same rid : fail!
+		//There is already same rid in same key : fail!
 		if(sameKey)
 		{
 			unsigned numOfRids = getNumOfRIDsInLeafEntry(entryToProcess,attribute.type);
@@ -1071,10 +1089,10 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 		//Overflowed Node: go inside overflow page and return null
 		if((tombstone != -1) && sameKey)
 		{
-			rc = insertEntryInOverflowPage(ixfileHandle,currentNodePage,pageToProcess,rid);
+			rc = insertEntryInOverflowPage(ixfileHandle,currentNodePage,pageToProcess,rid, attribute.type);
 			newChildNodeKey = NULL;
 			newChildNodePage = -1;
-			return 0;
+			return rc;
 		}
 
 		unsigned freeSpaceSize = getFreeSpaceSize(pageToProcess);
@@ -1117,9 +1135,10 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 		//Same key insertion and num of entry == 1 and no space means it requires overflow page.
 		else if(sameKey && (getNumOfEnt(pageToProcess) == 1))
 		{
-			rc = insertEntryInOverflowPage(ixfileHandle,currentNodePage, pageToProcess, rid);
+			rc = insertEntryInOverflowPage(ixfileHandle,currentNodePage, pageToProcess, rid, attribute.type);
 			newChildNodeKey = NULL;
 			newChildNodePage = -1;
+			return rc;
 		}
 		//split
 		else
