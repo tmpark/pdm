@@ -1531,9 +1531,11 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 		if(leafNodeOffset != freeSpaceOffset)
 		{
 			if(LeafNodePN == 0)
-				putEntryInItermediate(newChildEntry, Attribute.type, (((char *)leafNode) + leafNodeOffset), newLeafNodePN + 1);
+				putEntryInItermediate(newChildEntry, Attribute.type,
+						(((char *)leafNode) + leafNodeOffset), newLeafNodePN + 1);
 			else
-				putEntryInItermediate(newChildEntry, Attribute.type, (((char *)leafNode) + leafNodeOffset), newLeafNodePN);
+				putEntryInItermediate(newChildEntry, Attribute.type,
+						(((char *)leafNode) + leafNodeOffset), newLeafNodePN);
 		}
 		else
 		{
@@ -1594,7 +1596,7 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 			setRightSiblingPageNum(leafNode, newLeafNodePN + 1);
 			setParentPageNum(leafNode, 0);
 
-			setLeftMostChildPageNum(newChildEntry, LeafNodePN);
+			setLeftMostChildPageNum(newChildEntry, newLeafNodePN);
 			setRightSiblingPageNum(newChildEntry, -1);
 			setLeftSiblingPageNum(newChildEntry, -1);
 			setParentPageNum(newChildEntry, -1);
@@ -1708,13 +1710,8 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 			secondPartOffset += entSize;
 			if(leafNodeOffset == offset)
 			{
-				int y = getNumOfRIDsInLeafEntry(secondPart + secondPartOffset - entSize, Attribute.type);
-
 				setNumOfRIDsInLeaf(secondPart + secondPartOffset - entSize, Attribute.type,
 						getNumOfRIDsInLeafEntry(secondPart + secondPartOffset - entSize, Attribute.type) + 1);
-
-				int x = getNumOfRIDsInLeafEntry(secondPart + secondPartOffset - entSize, Attribute.type);
-
 				memcpy(secondPart + secondPartOffset, &(rid.pageNum), sizeof(PageNum));
 				secondPartOffset += sizeof(PageNum);
 				memcpy(secondPart + secondPartOffset, &(rid.slotNum), sizeof(SlotOffset));
@@ -1750,7 +1747,7 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 			setRightSiblingPageNum(leafNode, newLeafNodePN + 1);
 			setParentPageNum(leafNode, 0);
 
-			setLeftMostChildPageNum(newChildEntry, LeafNodePN);
+			setLeftMostChildPageNum(newChildEntry, newLeafNodePN);
 			setRightSiblingPageNum(newChildEntry, -1);
 			setLeftSiblingPageNum(newChildEntry, -1);
 			setParentPageNum(newChildEntry, -1);
