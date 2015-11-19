@@ -1457,7 +1457,7 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 	if(getNumOfEnt(leafNode) == 1)
 	{
 		putEntryInLeaf(newLeafNode,Attribute.type, key, rid, false);
-		putEntryInItermediate(newChildEntry, Attribute.type, key, newLeafNodePN);
+		putEntryInItermediate(newChildEntry, Attribute.type, key, newLeafNodePN + 1);
 
 		setRightSiblingPageNum(newLeafNode, getRightSiblingPageNum(leafNode));
 		if(LeafNodePN == 0)
@@ -1473,7 +1473,7 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 		setNodeType(newLeafNode, LEAF_NODE);
 		setTombstone(newLeafNode, -1);
 		setNumOfEnt(newLeafNode, 1);
-		setFreeSpaceOffset(newLeafNode,getSizeOfEntryInIntermediate(newLeafNode, Attribute.type));
+		setFreeSpaceOffset(newLeafNode,getSizeOfEntryInLeaf(newLeafNode, Attribute.type));
 		setLeftMostChildPageNum(newLeafNode, -1);
 
 		//Write first part to existing leafNode and update Page DIC
@@ -2171,13 +2171,13 @@ void IndexManager::_printBtree(IXFileHandle &ixfileHandle, const Attribute &attr
 		{
 			_printBtree(ixfileHandle, attribute, *page, childNode, numOfTabs + 1, lastChild);
 		}
-		else if(nodeType == LEAF_NODE)
+		else if(nodeType == LEAF_NODE && getNumOfEnt(childNode) > 0)
 		{
 			_printLeafNode(ixfileHandle,attribute, *page, childNode, numOfTabs + 1, lastChild);
 		}
 		else
 		{
-			cout << "ERRORRORORORORORROROOROROR" << endl;
+			//cout << "ERRORRORORORORORROROOROROR" << endl;
 		}
 		offset += entrySize;
 	}
