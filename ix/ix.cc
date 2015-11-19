@@ -2169,7 +2169,7 @@ void IndexManager::_printBtree(IXFileHandle &ixfileHandle, const Attribute &attr
 		{
 			_printBtree(ixfileHandle, attribute, *page, childNode, numOfTabs + 1, lastChild);
 		}
-		else if(nodeType == LEAF_NODE)
+		else if(nodeType == LEAF_NODE && getNumOfEnt(childNode) > 0)
 		{
 			_printLeafNode(ixfileHandle,attribute, *page, childNode, numOfTabs + 1, lastChild);
 		}
