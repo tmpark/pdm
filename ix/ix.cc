@@ -1388,13 +1388,22 @@ RC IndexManager::splitIntermediate(void *interNode, void *newInterNode, void *ne
 	int newChildEntrySize = 0;
 
 	bool secondHasNothing = false;
+	bool fuck = false;
 	char *newCEntryBuff = (char *)newChildEntry;
 	if(interNodeOffset != freeSpaceOffset)
 	{
-		putEntryInItermediate(newChildEntry, entryType, (((char *)interNode) + interNodeOffset), newInterNodePN);
-		setLeftMostChildPageNum(secondPart,	getChildOfIntermediateEntry(((char *)interNode) + interNodeOffset, entryType));
-		interNodeOffset += getSizeOfEntryInIntermediate(((char *)interNode) + interNodeOffset, entryType);
-		//if(interNodeOffset == freeSpaceOffset) secondHasNothing = true;
+		if(interNodeOffset == offset)
+		{
+			putEntryInItermediate(newChildEntry, entryType, entry, newInterNodePN);
+			setLeftMostChildPageNum(secondPart,	getChildOfIntermediateEntry(entry, entryType));
+			fuck = true;
+		}
+		else
+		{
+			putEntryInItermediate(newChildEntry, entryType, (((char *)interNode) + interNodeOffset), newInterNodePN);
+			setLeftMostChildPageNum(secondPart,	getChildOfIntermediateEntry(((char *)interNode) + interNodeOffset, entryType));
+			interNodeOffset += getSizeOfEntryInIntermediate(((char *)interNode) + interNodeOffset, entryType);
+		}//if(interNodeOffset == freeSpaceOffset) secondHasNothing = true;
 	}
 	else
 	{
@@ -1449,7 +1458,7 @@ RC IndexManager::splitIntermediate(void *interNode, void *newInterNode, void *ne
 	while(interNodeOffset != freeSpaceOffset)
 	{
 		numOfEntriesS++;
-		if(interNodeOffset == offset && !inserted)
+		if(interNodeOffset == offset && !inserted && !fuck)
 		{
 			memcpy(secondPart + secondPartOffset, entry, newEntrySize);
 			secondPartOffset += newEntrySize;
