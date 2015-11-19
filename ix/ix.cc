@@ -538,6 +538,8 @@ bool IndexManager::compareKeys(const void *key1,CompOp op, const void *key2,  At
 		string value2;
 		getKeyOfEntry(key1,value1);
 		getKeyOfEntry(key2,value2);
+
+
 		if(op == EQ_OP)
 			return (value1 == value2);
 		if(op == LT_OP)
