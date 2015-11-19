@@ -2175,7 +2175,7 @@ void IndexManager::_printBtree(IXFileHandle &ixfileHandle, const Attribute &attr
 		}
 		else
 		{
-			cout << "ERRORRORORORORORROROOROROR" << endl;
+			//cout << "ERRORRORORORORORROROOROROR" << endl;
 		}
 		offset += entrySize;
 	}
