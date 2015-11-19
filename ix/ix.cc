@@ -539,6 +539,8 @@ bool IndexManager::compareKeys(const void *key1,CompOp op, const void *key2,  At
 		getKeyOfEntry(key1,value1);
 		getKeyOfEntry(key2,value2);
 
+		//cout << value1 <<endl;
+		//cout << value2 <<endl;
 
 		if(op == EQ_OP)
 			return (value1 == value2);
@@ -594,6 +596,10 @@ SlotOffset IndexManager::findEntryOffsetToProcess(void *pageToProcess,AttrType a
 			string candidateValue;
 			getKeyOfEntry((const void*)entryToProcess, candidateValue);
 			string objectiveValue = extractVarChar(key);
+
+			//cout << candidateValue <<endl;
+			//cout << objectiveValue <<endl;
+
 			if (candidateValue <= objectiveValue)
 				candidateEntryOffset = currentEntryOffset;
 		}
@@ -601,7 +607,6 @@ SlotOffset IndexManager::findEntryOffsetToProcess(void *pageToProcess,AttrType a
 
 		if(candidateEntryOffset != currentEntryOffset)
 			return candidateEntryOffset;
-
 
 
 		//next entry
@@ -1058,6 +1063,19 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 		else
 		{
 			entryToProcess = pageToProcess + entryOffset;
+
+/*
+			string ext;
+			getKeyOfEntry(entryToProcess,ext);
+			cout << ext << endl;
+
+			RID extrid;
+			getRIDInLeaf(entryToProcess,attribute.type,0,extrid);
+
+			getKeyOfEntry(key,ext);
+			cout << ext << endl;
+*/
+
 			sameKey = compareKeys(key,EQ_OP,entryToProcess,attribute.type);
 			if(sameKey)
 				offsetToInsert = entryOffset;
@@ -1162,10 +1180,10 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 				}
 				entryToProcessTemp = entryToProcessTemp + getSizeOfEntryInLeaf(entryToProcessTemp,attribute.type);
 			}
+*/
+			//cout << getFreeSpaceOffset(pageToProcess)<<"\t"<<getNumOfEnt(pageToProcess)<<"\t"<<getTombstone(pageToProcess)<<"\t"<<getNodeType(pageToProcess)<<"\t"<<getParentPageNum(pageToProcess)<<"\t"<<getLeftSiblingPageNum(pageToProcess)<<"\t"<<getRightSiblingPageNum(pageToProcess)<<"\t"<<getLeftMostChildPageNum(pageToProcess)<<endl<<endl<<endl<<endl<<endl;
 
-			cout << getFreeSpaceOffset(pageToProcess)<<"\t"<<getNumOfEnt(pageToProcess)<<"\t"<<getTombstone(pageToProcess)<<"\t"<<getNodeType(pageToProcess)<<"\t"<<getParentPageNum(pageToProcess)<<"\t"<<getLeftSiblingPageNum(pageToProcess)<<"\t"<<getRightSiblingPageNum(pageToProcess)<<"\t"<<getLeftMostChildPageNum(pageToProcess)<<endl<<endl<<endl<<endl<<endl;
-
-
+/*
 			if(getFreeSpaceOffset(pageToProcess) == 3869)
 			{
 				printf("sibal\n");
@@ -1221,14 +1239,17 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 				if(rc != 0)
 					return rc;
 			}
-			/*
 
+			string sibal;
+			getKeyOfEntry(newChildNodeKey,sibal);
+			cout << sibal << "\t" << endl;
+			getKeyOfEntry(key,sibal);
+			cout << sibal << endl;
+			//cout << getFreeSpaceOffset(newChildNodeKey)<<"\t"<<getNumOfEnt(newChildNodeKey)<<"\t"<<getTombstone(newChildNodeKey)<<"\t"<<getNodeType(newChildNodeKey)<<"\t"<<getParentPageNum(newChildNodeKey)<<"\t"<<getLeftSiblingPageNum(newChildNodeKey)<<"\t"<<getRightSiblingPageNum(newChildNodeKey)<<"\t"<<getLeftMostChildPageNum(newChildNodeKey)<<endl;
+			//cout << getFreeSpaceOffset(pageToProcess)<<"\t"<<getNumOfEnt(pageToProcess)<<"\t"<<getTombstone(pageToProcess)<<"\t"<<getNodeType(pageToProcess)<<"\t"<<getParentPageNum(pageToProcess)<<"\t"<<getLeftSiblingPageNum(pageToProcess)<<"\t"<<getRightSiblingPageNum(pageToProcess)<<"\t"<<getLeftMostChildPageNum(pageToProcess)<<endl;
+			//cout << getFreeSpaceOffset(newChildPageToProcess)<<"\t"<<getNumOfEnt(newChildPageToProcess)<<"\t"<<getTombstone(newChildPageToProcess)<<"\t"<<getNodeType(newChildPageToProcess)<<"\t"<<getParentPageNum(newChildPageToProcess)<<"\t"<<getLeftSiblingPageNum(newChildPageToProcess)<<"\t"<<getRightSiblingPageNum(newChildPageToProcess)<<"\t"<<getLeftMostChildPageNum(newChildPageToProcess)<<endl;
 
-			cout << getFreeSpaceOffset(newChildNodeKey)<<"\t"<<getNumOfEnt(newChildNodeKey)<<"\t"<<getTombstone(newChildNodeKey)<<"\t"<<getNodeType(newChildNodeKey)<<"\t"<<getParentPageNum(newChildNodeKey)<<"\t"<<getLeftSiblingPageNum(newChildNodeKey)<<"\t"<<getRightSiblingPageNum(newChildNodeKey)<<"\t"<<getLeftMostChildPageNum(newChildNodeKey)<<endl;
-			cout << getFreeSpaceOffset(pageToProcess)<<"\t"<<getNumOfEnt(pageToProcess)<<"\t"<<getTombstone(pageToProcess)<<"\t"<<getNodeType(pageToProcess)<<"\t"<<getParentPageNum(pageToProcess)<<"\t"<<getLeftSiblingPageNum(pageToProcess)<<"\t"<<getRightSiblingPageNum(pageToProcess)<<"\t"<<getLeftMostChildPageNum(pageToProcess)<<endl;
-			cout << getFreeSpaceOffset(newChildPageToProcess)<<"\t"<<getNumOfEnt(newChildPageToProcess)<<"\t"<<getTombstone(newChildPageToProcess)<<"\t"<<getNodeType(newChildPageToProcess)<<"\t"<<getParentPageNum(newChildPageToProcess)<<"\t"<<getLeftSiblingPageNum(newChildPageToProcess)<<"\t"<<getRightSiblingPageNum(newChildPageToProcess)<<"\t"<<getLeftMostChildPageNum(newChildPageToProcess)<<endl;
-
-
+/*
 
 			unsigned numOfEnt = getNumOfEnt(pageToProcess);
 			char *entryToProcessTemp = pageToProcess;
@@ -1902,6 +1923,9 @@ RC IndexManager::_deleteEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 			return -1;
 
 		entryToProcess = pageToProcess + entryOffset;
+
+
+
 		sameKey = compareKeys(key,EQ_OP,entryToProcess,attribute.type);
 
 		if(!sameKey)
