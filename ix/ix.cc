@@ -1326,17 +1326,22 @@ RC IndexManager::splitIntermediate(void *interNode, void *newInterNode, void *ne
 	int freeSpaceOffset = getFreeSpaceOffset(interNode);
 	int newChildEntrySize = 0;
 
+	bool secondHasNothing = false;
 	char *newCEntryBuff = (char *)newChildEntry;
 	if(interNodeOffset != freeSpaceOffset)
 	{
 		putEntryInItermediate(newChildEntry, entryType, (((char *)interNode) + interNodeOffset), newInterNodePN);
+		setLeftMostChildPageNum(secondPart,	getChildOfIntermediateEntry(((char *)interNode) + interNodeOffset, entryType));
+		interNodeOffset += getSizeOfEntryInIntermediate(((char *)interNode) + interNodeOffset, entryType);
+		if(interNodeOffset == freeSpaceOffset) secondHasNothing = true;
 	}
 	else
 	{
+		secondHasNothing = true;
 		memcpy(newChildEntry, entry, newEntrySize);
+		setLeftMostChildPageNum(secondPart,	getChildOfIntermediateEntry(entry, entryType));
 	}
 	newChildEntrySize = getSizeOfEntryInIntermediate(newChildEntry, entryType);
-	setLeftMostChildPageNum(secondPart,	*(int *)(newCEntryBuff + newChildEntrySize - 4));
 
 	//	//	if(interNodeOffset != freeSpaceOffset)
 	//	//	{
@@ -1395,7 +1400,7 @@ RC IndexManager::splitIntermediate(void *interNode, void *newInterNode, void *ne
 		interNodeOffset += entSize;
 	}
 
-	if(freeSpaceOffset == offset)
+	if(freeSpaceOffset == offset && !secondHasNothing)
 	{
 		numOfEntriesS++;
 		memcpy(secondPart + secondPartOffset, entry, newEntrySize);
@@ -1497,19 +1502,19 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 			setRightSiblingPageNum(leafNode, newLeafNodePN);
 		}
 
-//		//update second part of Page DIC
-//		setRightSiblingPageNum(newLeafNode, getRightSiblingPageNum(leafNode));
-//		setLeftSiblingPageNum(newLeafNode, LeafNodePN);
-//		setParentPageNum(newLeafNode, getParentPageNum(leafNode));
-//		setNodeType(newLeafNode, LEAF_NODE);
-//		setTombstone(newLeafNode, -1);
-//		setNumOfEnt(newLeafNode, 1);
-//		setFreeSpaceOffset(newLeafNode,
-//				getSizeOfEntryInLeaf(newLeafNode, Attribute.type));
-//		setLeftMostChildPageNum(newLeafNode, -1);
-//
-//		//Write first part to existing leafNode and update Page DIC
-//		setRightSiblingPageNum(leafNode, newLeafNodePN);
+		//		//update second part of Page DIC
+		//		setRightSiblingPageNum(newLeafNode, getRightSiblingPageNum(leafNode));
+		//		setLeftSiblingPageNum(newLeafNode, LeafNodePN);
+		//		setParentPageNum(newLeafNode, getParentPageNum(leafNode));
+		//		setNodeType(newLeafNode, LEAF_NODE);
+		//		setTombstone(newLeafNode, -1);
+		//		setNumOfEnt(newLeafNode, 1);
+		//		setFreeSpaceOffset(newLeafNode,
+		//				getSizeOfEntryInLeaf(newLeafNode, Attribute.type));
+		//		setLeftMostChildPageNum(newLeafNode, -1);
+		//
+		//		//Write first part to existing leafNode and update Page DIC
+		//		setRightSiblingPageNum(leafNode, newLeafNodePN);
 		return 0;
 	}
 
@@ -1587,15 +1592,26 @@ RC IndexManager::splitLeaf(void *leafNode, void *newLeafNode, void *newChildEntr
 		//Create newChildNode
 		int numOfEntriesS = 0;
 		int freeSpaceOffset = getFreeSpaceOffset(leafNode);
+		bool secondHasNothing = false;
 
 		if(leafNodeOffset != freeSpaceOffset)
 		{
 			if(LeafNodePN == 0)
-				putEntryInItermediate(newChildEntry, Attribute.type,
-						(((char *)leafNode) + leafNodeOffset), newLeafNodePN + 1);
+			{
+				if(offset == leafNodeOffset)
+					putEntryInItermediate(newChildEntry, Attribute.type, key, newLeafNodePN + 1);
+				else
+					putEntryInItermediate(newChildEntry, Attribute.type,
+							(((char *)leafNode) + leafNodeOffset), newLeafNodePN + 1);
+			}
 			else
-				putEntryInItermediate(newChildEntry, Attribute.type,
-						(((char *)leafNode) + leafNodeOffset), newLeafNodePN);
+			{
+				if(offset == leafNodeOffset)
+					putEntryInItermediate(newChildEntry, Attribute.type, key, newLeafNodePN);
+				else
+					putEntryInItermediate(newChildEntry, Attribute.type,
+							(((char *)leafNode) + leafNodeOffset), newLeafNodePN);
+			}
 		}
 		else
 		{
