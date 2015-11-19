@@ -1038,6 +1038,39 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 					rc = ixfileHandle.fileHandle.appendPage(newChildPageToProcess);
 					if(rc != 0)
 						return rc;
+
+					unsigned numOfEnt = getNumOfEnt(pageToProcess);
+					char *entryToProcessTemp = pageToProcess;
+					for(unsigned i = 0; i <  numOfEnt; i++)
+					{
+						string kkk;
+						getKeyOfEntry(entryToProcessTemp, kkk);
+						cout << kkk << getChildOfIntermediateEntry(entryToProcessTemp,attribute.type) <<endl;
+						entryToProcessTemp = entryToProcessTemp + getSizeOfEntryInIntermediate(entryToProcessTemp,attribute.type);
+					}
+
+					printf("************************************child****************************************\n");
+
+					numOfEnt = getNumOfEnt(newChildPageToProcess);
+					entryToProcessTemp = newChildPageToProcess;
+					for(unsigned i = 0; i <  numOfEnt; i++)
+					{
+						string kkk;
+						getKeyOfEntry(entryToProcessTemp, kkk);
+						cout << kkk << getChildOfIntermediateEntry(entryToProcessTemp,attribute.type) <<endl;
+						entryToProcessTemp = entryToProcessTemp + getSizeOfEntryInIntermediate(entryToProcessTemp,attribute.type);
+					}
+
+
+					printf("sibal\n");
+					string sibal;
+					getKeyOfEntry(newChildNodeKey,sibal);
+					cout << sibal << getChildOfIntermediateEntry(newChildNodeKey,attribute.type) <<endl;
+					cout << sibal << "\t" << endl;
+
+
+
+
 				}
 
 
@@ -1239,18 +1272,19 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 				if(rc != 0)
 					return rc;
 			}
-
+/*
 			string sibal;
 			getKeyOfEntry(newChildNodeKey,sibal);
 			cout << sibal << "\t" << endl;
 			getKeyOfEntry(key,sibal);
 			cout << sibal << endl;
+
 			//cout << getFreeSpaceOffset(newChildNodeKey)<<"\t"<<getNumOfEnt(newChildNodeKey)<<"\t"<<getTombstone(newChildNodeKey)<<"\t"<<getNodeType(newChildNodeKey)<<"\t"<<getParentPageNum(newChildNodeKey)<<"\t"<<getLeftSiblingPageNum(newChildNodeKey)<<"\t"<<getRightSiblingPageNum(newChildNodeKey)<<"\t"<<getLeftMostChildPageNum(newChildNodeKey)<<endl;
 			//cout << getFreeSpaceOffset(pageToProcess)<<"\t"<<getNumOfEnt(pageToProcess)<<"\t"<<getTombstone(pageToProcess)<<"\t"<<getNodeType(pageToProcess)<<"\t"<<getParentPageNum(pageToProcess)<<"\t"<<getLeftSiblingPageNum(pageToProcess)<<"\t"<<getRightSiblingPageNum(pageToProcess)<<"\t"<<getLeftMostChildPageNum(pageToProcess)<<endl;
 			//cout << getFreeSpaceOffset(newChildPageToProcess)<<"\t"<<getNumOfEnt(newChildPageToProcess)<<"\t"<<getTombstone(newChildPageToProcess)<<"\t"<<getNodeType(newChildPageToProcess)<<"\t"<<getParentPageNum(newChildPageToProcess)<<"\t"<<getLeftSiblingPageNum(newChildPageToProcess)<<"\t"<<getRightSiblingPageNum(newChildPageToProcess)<<"\t"<<getLeftMostChildPageNum(newChildPageToProcess)<<endl;
+*/
 
 /*
-
 			unsigned numOfEnt = getNumOfEnt(pageToProcess);
 			char *entryToProcessTemp = pageToProcess;
 			for(unsigned i = 0; i <  numOfEnt; i++)
@@ -1289,7 +1323,11 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 
 
 			printf("sibal\n");
-			 */
+			string sibal;
+			getKeyOfEntry(newChildNodeKey,sibal);
+			cout << sibal << "\t" << endl;
+
+			*/
 		}
 	}
 
