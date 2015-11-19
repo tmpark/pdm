@@ -1333,12 +1333,13 @@ RC IndexManager::splitIntermediate(void *interNode, void *newInterNode, void *ne
 		putEntryInItermediate(newChildEntry, entryType, (((char *)interNode) + interNodeOffset), newInterNodePN);
 		setLeftMostChildPageNum(secondPart,	getChildOfIntermediateEntry(((char *)interNode) + interNodeOffset, entryType));
 		interNodeOffset += getSizeOfEntryInIntermediate(((char *)interNode) + interNodeOffset, entryType);
-		if(interNodeOffset == freeSpaceOffset) secondHasNothing = true;
+		//if(interNodeOffset == freeSpaceOffset) secondHasNothing = true;
 	}
 	else
 	{
 		secondHasNothing = true;
-		memcpy(newChildEntry, entry, newEntrySize);
+		putEntryInItermediate(newChildEntry, entryType, entry, newInterNodePN);
+		//memcpy(newChildEntry, entry, newEntrySize);
 		setLeftMostChildPageNum(secondPart,	getChildOfIntermediateEntry(entry, entryType));
 	}
 	newChildEntrySize = getSizeOfEntryInIntermediate(newChildEntry, entryType);
