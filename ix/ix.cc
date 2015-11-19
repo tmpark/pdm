@@ -1038,7 +1038,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 					rc = ixfileHandle.fileHandle.appendPage(newChildPageToProcess);
 					if(rc != 0)
 						return rc;
-
+/*
 					unsigned numOfEnt = getNumOfEnt(pageToProcess);
 					char *entryToProcessTemp = pageToProcess;
 					for(unsigned i = 0; i <  numOfEnt; i++)
@@ -1069,7 +1069,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 					cout << sibal << "\t" << endl;
 
 
-
+*/
 
 				}
 
