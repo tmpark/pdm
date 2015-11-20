@@ -2155,7 +2155,7 @@ RC IndexManager::scan(IXFileHandle &ixfileHandle,
 	if(lowKey != NULL && compareKeys(lowKey,EQ_OP, entryToProcess,attribute.type) && !lowKeyInclusive)
 	{
 		entryOffset = entryOffset  + getSizeOfEntryInLeaf(entryToProcess,attribute.type);
-		ix_ScanIterator.tombStone = -1;//Also skip the overflow Page for this key
+		ix_ScanIterator.tombStone = -1;//Also skip the overflow Page for this key since Overflow page only has one key
 	}
 
 	//cout << getFreeSpaceOffset(ix_ScanIterator.tempPage) << endl << flush;
@@ -2443,7 +2443,7 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 			rc = _getNextEntryFromOverflow(overflowPageToProcess,rid);
 			if(rc == 0)
 			{
-				indexManager->copyKeyOfEntry(key,entryToProcess,keyType);
+				indexManager->copyKeyOfEntry(key,pageToProcess,keyType);
 				return rc;
 			}
 		}
