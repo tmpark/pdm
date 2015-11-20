@@ -2125,16 +2125,16 @@ RC IndexManager::scan(IXFileHandle &ixfileHandle,
 	}
 	//After while statement, target leaf is loaded in ix_ScanIterator.tempPage
 
-	SlotOffset entryOffset = findEntryOffsetToProcess(pageToProcess,attribute.type,lowKey);
+	ix_ScanIterator.entryOffset = findEntryOffsetToProcess(pageToProcess,attribute.type,lowKey);
 
 
 	//-1 means first position
-	if(entryOffset == -1)
-		entryOffset = 0;
+	if(ix_ScanIterator.entryOffset == -1)
+		ix_ScanIterator.entryOffset = 0;
 
-	char *entryToProcess = (char*)pageToProcess + entryOffset;
+	char *entryToProcess = (char*)pageToProcess + ix_ScanIterator.entryOffset;
 
-	ix_ScanIterator.entryOffset = entryOffset;
+
 	ix_ScanIterator.currentSlot = 0;
 	ix_ScanIterator.tombStone = getTombstone(pageToProcess);
 
@@ -2154,7 +2154,7 @@ RC IndexManager::scan(IXFileHandle &ixfileHandle,
 	//Do not allow same key : skip
 	if(lowKey != NULL && compareKeys(lowKey,EQ_OP, entryToProcess,attribute.type) && !lowKeyInclusive)
 	{
-		entryOffset = entryOffset  + getSizeOfEntryInLeaf(entryToProcess,attribute.type);
+		ix_ScanIterator.entryOffset = ix_ScanIterator.entryOffset  + getSizeOfEntryInLeaf(entryToProcess,attribute.type);
 		ix_ScanIterator.tombStone = -1;//Also skip the overflow Page for this key since Overflow page only has one key
 	}
 
