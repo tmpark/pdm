@@ -62,7 +62,7 @@ RelationManager::~RelationManager()
 RC RelationManager::createCatalog()
 {
 
-	admin = true;
+
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 
 	if((rbfm->createFile(string(COLUMNS_TABLE_NAME))))
@@ -137,7 +137,10 @@ RC RelationManager::createCatalog()
 	attrs.push_back(attr);
 
 	//Write table info here.
+
+	admin = true;
 	createTable(string(TABLES_TABLE_NAME), attrs);
+	admin = false;
 
 	/*
     FileHandle catFileHandle;
@@ -188,14 +191,15 @@ RC RelationManager::createCatalog()
 	attr1.length = 4;
 	attrs1.push_back(attr1);
 	//Write table info here.
+	admin = true;
 	createTable(string(COLUMNS_TABLE_NAME),attrs1);
-
+	admin = false;
 
 
 	/***DELETE THINGS***/
 
 	//delete rbfm;
-	admin = false;
+
 
 	return 0;
 }
@@ -205,8 +209,10 @@ RC RelationManager::deleteCatalog()
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 	tabFileHandle.setFileStream(NULL);
 	colFileHandle.setFileStream(NULL);
+	admin = true;
 	rbfm->destroyFile(string(TABLES_TABLE_NAME));
 	rbfm->destroyFile(string(COLUMNS_TABLE_NAME));
+	admin = false;
 	return 0;
 }
 
@@ -221,7 +227,7 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 	 */
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 
-	if((tableName.compare(string(COLUMNS_TABLE_NAME)) != 0) & (tableName.compare(string(TABLES_TABLE_NAME)) != 0)) {
+	if((tableName.compare(string(COLUMNS_TABLE_NAME)) != 0) && (tableName.compare(string(TABLES_TABLE_NAME)) != 0)) {
 		if ((rbfm->createFile(tableName))) {
 			cerr << "Couldnt create file." << endl;
 			return 1;
@@ -279,7 +285,10 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 	RC rc;
 	//FIXME
 	RID rid;
+
+	admin = true;
 	rc = insertTuple(string(TABLES_TABLE_NAME),buffer1, rid);
+	admin = false;
 
 
 	for(unsigned int i = 0; i < attrs.size(); i++)
@@ -334,8 +343,9 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 
 		//FIXME
 		RID rid;
+		admin = true;
 		rc = insertTuple(string(COLUMNS_TABLE_NAME),buffer1, rid);
-
+        admin = false;
 
 		/****TESTING****/
 
@@ -392,6 +402,12 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 
 RC RelationManager::deleteTable(const string &tableName)
 {
+
+	//User access cut
+	if(admin == false && (tableName == string(TABLES_TABLE_NAME) || tableName == string(COLUMNS_TABLE_NAME)))
+	{
+		return -1;
+	}
 	//Remove table's table info from table file and also remove table's column info from column file
 	//..
 	//..
@@ -434,8 +450,9 @@ RC RelationManager::deleteTable(const string &tableName)
 	}
 
 
+	admin = true;
 	deleteTuple(string(TABLES_TABLE_NAME), rid);
-
+    admin = false;
 
 	RM_ScanIterator rmsiColumn;
 	attr = "table-id";
@@ -457,18 +474,22 @@ RC RelationManager::deleteTable(const string &tableName)
 	int x = 1;
 	while(rmsiColumn.getNextTuple(rid,rData) != RM_EOF)
 	{
+		admin = true;
 		deleteTuple(string(COLUMNS_TABLE_NAME), rid);
+		admin = false;
 		x++;
 	}
 	//cout  << x << endl;
 
 	rmsiColumn.close();
 
+	admin = true;
 	if(rbfm->destroyFile(tableName))
 	{
 		cerr << "Error occured while destroying file!" << endl;
 		return 4;
 	}
+	admin = false;
 
 	return 0;
 }
@@ -574,6 +595,12 @@ RC RelationManager::insertTuple(const string &tableName, const void *data, RID &
 		return -1;//get attribute info failed
 
 
+	//User access cut
+	if(admin == false && (tableName == string(TABLES_TABLE_NAME) || tableName == string(COLUMNS_TABLE_NAME)))
+	{
+		return -1;
+	}
+
 
 	//}
 	/*
@@ -672,6 +699,12 @@ RC RelationManager::insertTuple(const string &tableName, const void *data, RID &
 
 RC RelationManager::deleteTuple(const string &tableName, const RID &rid)
 {
+
+	if(admin == false && (tableName == string(TABLES_TABLE_NAME) || tableName == string(COLUMNS_TABLE_NAME)))
+	{
+		return -1;
+	}
+
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 
 	vector<Attribute> attrVector;
@@ -716,6 +749,12 @@ RC RelationManager::deleteTuple(const string &tableName, const RID &rid)
 
 RC RelationManager::updateTuple(const string &tableName, const void *data, const RID &rid)
 {
+
+	if(admin == false && (tableName == string(TABLES_TABLE_NAME) || tableName == string(COLUMNS_TABLE_NAME)))
+	{
+		return -1;
+	}
+
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 	vector<Attribute> attrVector;
 	/*
@@ -951,7 +990,6 @@ RC RM_ScanIterator:: getNextTuple(RID &rid, void *data) {
 RC RM_ScanIterator::close()
 {
 	RC rc = -1;
-	RecordBasedFileManager *rbfm = RecordBasedFileManager :: instance();
 	rc = rbfm_scanIterator.close();
 	return rc;
 }
