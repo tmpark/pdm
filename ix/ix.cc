@@ -4,6 +4,7 @@
 #include <fstream> //added library
 #include <cmath> //added library
 #include <cstring>
+#include <cstdlib>
 
 IndexManager* IndexManager::_index_manager = 0;
 
@@ -1038,7 +1039,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 					rc = ixfileHandle.fileHandle.appendPage(newChildPageToProcess);
 					if(rc != 0)
 						return rc;
-/*
+					/*
 					unsigned numOfEnt = getNumOfEnt(pageToProcess);
 					char *entryToProcessTemp = pageToProcess;
 					for(unsigned i = 0; i <  numOfEnt; i++)
@@ -1069,7 +1070,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 					cout << sibal << "\t" << endl;
 
 
-*/
+					 */
 
 				}
 
@@ -1097,7 +1098,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 		{
 			entryToProcess = pageToProcess + entryOffset;
 
-/*
+			/*
 			string ext;
 			getKeyOfEntry(entryToProcess,ext);
 			cout << ext << endl;
@@ -1107,7 +1108,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 
 			getKeyOfEntry(key,ext);
 			cout << ext << endl;
-*/
+			 */
 
 			sameKey = compareKeys(key,EQ_OP,entryToProcess,attribute.type);
 			if(sameKey)
@@ -1196,7 +1197,7 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 		//split
 		else
 		{
-/*
+			/*
 			unsigned numOfEnt = getNumOfEnt(pageToProcess);
 			char *entryToProcessTemp = pageToProcess;
 			for(unsigned i = 0; i <  numOfEnt; i++)
@@ -1213,10 +1214,10 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 				}
 				entryToProcessTemp = entryToProcessTemp + getSizeOfEntryInLeaf(entryToProcessTemp,attribute.type);
 			}
-*/
+			 */
 			//cout << getFreeSpaceOffset(pageToProcess)<<"\t"<<getNumOfEnt(pageToProcess)<<"\t"<<getTombstone(pageToProcess)<<"\t"<<getNodeType(pageToProcess)<<"\t"<<getParentPageNum(pageToProcess)<<"\t"<<getLeftSiblingPageNum(pageToProcess)<<"\t"<<getRightSiblingPageNum(pageToProcess)<<"\t"<<getLeftMostChildPageNum(pageToProcess)<<endl<<endl<<endl<<endl<<endl;
 
-/*
+			/*
 			if(getFreeSpaceOffset(pageToProcess) == 3869)
 			{
 				printf("sibal\n");
@@ -1272,19 +1273,19 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 				if(rc != 0)
 					return rc;
 			}
-/*
+			/*
 			string sibal;
 			getKeyOfEntry(newChildNodeKey,sibal);
 			cout << sibal << "\t" << endl;
 			getKeyOfEntry(key,sibal);
 			cout << sibal << endl;
-*/
+			 */
 			//cout << getFreeSpaceOffset(newChildNodeKey)<<"\t"<<getNumOfEnt(newChildNodeKey)<<"\t"<<getTombstone(newChildNodeKey)<<"\t"<<getNodeType(newChildNodeKey)<<"\t"<<getParentPageNum(newChildNodeKey)<<"\t"<<getLeftSiblingPageNum(newChildNodeKey)<<"\t"<<getRightSiblingPageNum(newChildNodeKey)<<"\t"<<getLeftMostChildPageNum(newChildNodeKey)<<endl;
 			//cout << getFreeSpaceOffset(pageToProcess)<<"\t"<<getNumOfEnt(pageToProcess)<<"\t"<<getTombstone(pageToProcess)<<"\t"<<getNodeType(pageToProcess)<<"\t"<<getParentPageNum(pageToProcess)<<"\t"<<getLeftSiblingPageNum(pageToProcess)<<"\t"<<getRightSiblingPageNum(pageToProcess)<<"\t"<<getLeftMostChildPageNum(pageToProcess)<<endl;
 			//cout << getFreeSpaceOffset(newChildPageToProcess)<<"\t"<<getNumOfEnt(newChildPageToProcess)<<"\t"<<getTombstone(newChildPageToProcess)<<"\t"<<getNodeType(newChildPageToProcess)<<"\t"<<getParentPageNum(newChildPageToProcess)<<"\t"<<getLeftSiblingPageNum(newChildPageToProcess)<<"\t"<<getRightSiblingPageNum(newChildPageToProcess)<<"\t"<<getLeftMostChildPageNum(newChildPageToProcess)<<endl;
 
 
-/*
+			/*
 			numOfEnt = getNumOfEnt(pageToProcess);
 		    entryToProcessTemp = pageToProcess;
 			for(unsigned i = 0; i <  numOfEnt; i++)
@@ -1320,13 +1321,13 @@ RC IndexManager::_insertEntry(IXFileHandle &ixfileHandle, const Attribute &attri
 				}
 				entryToProcessTemp = entryToProcessTemp + getSizeOfEntryInLeaf(entryToProcessTemp,attribute.type);
 			}
-*/
-/*
+			 */
+			/*
 			printf("sibal\n");
 			string sibal;
 			getKeyOfEntry(newChildNodeKey,sibal);
 			cout << sibal << "\t" << endl;
-*/
+			 */
 		}
 	}
 
@@ -2091,9 +2092,10 @@ RC IndexManager::scan(IXFileHandle &ixfileHandle,
 
 	RC rc = -1;
 
-	void *pageToProcess = tempPage;
-	ix_ScanIterator.tempPage = tempPage;
-	ix_ScanIterator.tempOverFlowPage = tempOverFlowPage;
+
+	ix_ScanIterator.tempPage = malloc(PAGE_SIZE); //tempPage;
+	ix_ScanIterator.tempOverFlowPage = malloc(PAGE_SIZE); //tempOverFlowPage;
+	void *pageToProcess = ix_ScanIterator.tempPage;
 	ix_ScanIterator.fileHandle = &ixfileHandle.fileHandle;
 	ix_ScanIterator.until = highKey;
 	if(highKeyInclusive)
@@ -2142,7 +2144,7 @@ RC IndexManager::scan(IXFileHandle &ixfileHandle,
 	if(ix_ScanIterator.tombStone != -1)
 	{
 		//Load Overflow Page
-		void *overflowPage = tempOverFlowPage;
+		void *overflowPage = ix_ScanIterator.tempOverFlowPage;
 		rc = ixfileHandle.fileHandle.readPage(ix_ScanIterator.tombStone,overflowPage);//Read Page
 		if(rc != 0)
 			return rc;
@@ -2449,28 +2451,53 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 		}
 		//-------------------------------------------------------------------------
 
-		PageNum nextNodePage = indexManager->getRightSiblingPageNum(pageToProcess);
-
-		//end Of leaf Node
-		if(nextNodePage == -1)
-			return IX_EOF;
-		rc = fileHandle->readPage(nextNodePage,pageToProcess);//Read Page
-		if(rc != 0)
-			return rc;
-		tombStone = indexManager->getTombstone(pageToProcess);
-		entryOffset = 0;
-		currentSlot = 0;
-		entryToProcess = pageToProcess;
-
-		if(tombStone != -1)
+		bool noEntry = true;
+		while(noEntry)
 		{
-			//Load Overflow Page
-			rc = fileHandle->readPage(tombStone,overflowPageToProcess);//Read Page
+			PageNum nextNodePage = indexManager->getRightSiblingPageNum(pageToProcess);
+
+			//end Of leaf Node
+			if(nextNodePage == -1)
+				return IX_EOF;
+			rc = fileHandle->readPage(nextNodePage,pageToProcess);//Read Page
 			if(rc != 0)
 				return rc;
-			numOfRidsInOverflow = indexManager->getNumOfEnt(overflowPageToProcess);
-			tombStoneInOverflow = indexManager->getTombstone(overflowPageToProcess);
-			currentOverFlowSlot = 0;
+
+			unsigned numOfEntry = indexManager->getNumOfEnt(pageToProcess);
+			tombStone = indexManager->getTombstone(pageToProcess);
+			entryOffset = 0;
+			currentSlot = 0;
+			entryToProcess = pageToProcess;
+
+			if(tombStone != -1)
+			{
+				//Load Overflow Page
+				rc = fileHandle->readPage(tombStone,overflowPageToProcess);//Read Page
+				if(rc != 0)
+					return rc;
+				numOfRidsInOverflow = indexManager->getNumOfEnt(overflowPageToProcess);
+				tombStoneInOverflow = indexManager->getTombstone(overflowPageToProcess);
+				currentOverFlowSlot = 0;
+			}
+
+
+		    if(numOfEntry == 0)
+		    {
+				if(tombStone != -1)
+				{
+					rc = _getNextEntryFromOverflow(overflowPageToProcess,rid);
+					if(rc == 0)
+					{
+						indexManager->copyKeyOfEntry(key,pageToProcess,keyType);
+						return rc;
+					}
+				}
+
+		    	continue;
+		    }
+		    else
+		    	noEntry = false;
+
 		}
 		//-------------------------------------------------------------------------
 	}
@@ -2495,6 +2522,8 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 
 RC IX_ScanIterator::close()
 {
+
+
 	indexManager = NULL;
 	op = EQ_OP;
 	currentSlot = 0;
@@ -2506,8 +2535,8 @@ RC IX_ScanIterator::close()
 	keyType = TypeInt;
 	until = NULL;
 	currentOverFlowSlot = 0;
-	tempPage = NULL;
-	tempOverFlowPage = NULL;
+	free(tempPage);
+	free(tempOverFlowPage);
 	return 0;
 }
 
