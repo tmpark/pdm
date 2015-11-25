@@ -2,7 +2,6 @@
 #include <bitset>
 #include <cmath>
 #include <cstdlib>
-//#include <cstdint>
 #include "rm.h"
 #include "string.h"
 #include "../rbf/rbfm.h"
@@ -86,14 +85,6 @@ RC RelationManager::createCatalog()
 	{
 		rbfm->openFile(string(COLUMNS_TABLE_NAME),colFileHandle);
 	}
-	/*
-    FileHandle tabFileHandle;
-    if(!(rbfm->openFile(TABLES_TABLE_NAME,tabFileHandle)))
-    {
-        cerr << "Couldnt open table file." << endl;
-        return 3;
-    }
-	 */
 
 
 	//Create table's table info here
@@ -110,12 +101,6 @@ RC RelationManager::createCatalog()
 	vector<Attribute> attrs;
 
 
-/*
-	attr.name = "version";
-	attr.type = TypeInt;
-	attr.length = 4;
-	attrs.push_back(attr);
-*/
 	attr.name = "table-id";
 	attr.type = TypeInt;
 	attr.length = 4;
@@ -142,27 +127,10 @@ RC RelationManager::createCatalog()
 	createTable(string(TABLES_TABLE_NAME), attrs);
 	admin = false;
 
-	/*
-    FileHandle catFileHandle;
-    if(!(rbfm->openFile(COLUMNS_TABLE_NAME,tabFileHandle)))
-    {
-        cerr << "Couldnt open column file." << endl;
-        return 4;
-    }
-	 */
-	//Create catalog's table info here
+
 	Attribute attr1;
 	vector<Attribute> attrs1;
-/*
-	attr1.name = "version";
-	attr1.type = TypeInt;
-	attr1.length = 4;
-	attrs1.push_back(attr1);
-*/
-	/*   attr1.name = "version_deleted";
-    attr1.type = TypeInt;
-    attr1.length = 4;
-    attrs1.push_back(attr1);*/
+
 
 	attr1.name = "table-id";
 	attr1.type = TypeInt;
@@ -301,14 +269,6 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 
 		memset(buffer, 0, 1);
 		buffer += 1;
-/*		//version_added
-		memcpy(buffer, &version, 4);
-		buffer += 4;*/
-		//version_deleted
-		/*  version = -1;
-        memcpy(buffer, &version, 4);
-        version = 0;
-        buffer += 4;*/
 
 		//tableid
 		memcpy(buffer,&nextTableID,4);
@@ -351,16 +311,7 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 
 		Attribute attr1;
 		vector<Attribute> attrs1;
-/*
-		attr1.name = "version";
-		attr1.type = TypeInt;
-		attr1.length = 4;
-		attrs1.push_back(attr1);
-*/
-		/* attr1.name = "version_deleted";
-        attr1.type = TypeInt;
-        attr1.length = 4;
-        attrs1.push_back(attr1);*/
+
 
 		attr1.name = "table-id";
 		attr1.type = TypeInt;
@@ -579,13 +530,6 @@ RC RelationManager::insertTuple(const string &tableName, const void *data, RID &
 	RC rc = 0;
 
 	vector<Attribute> attrVector;
-/*
-	Attribute at;
-	at.name = "version";
-	at.type = TypeInt;
-	at.length = 4;
-	attrVector.push_back(at);
-*/
 
 
 	//if(tableName.compare(string(TABLES_TABLE_NAME)) == 0 || tableName.compare(string(COLUMNS_TABLE_NAME)) == 0)
@@ -602,77 +546,12 @@ RC RelationManager::insertTuple(const string &tableName, const void *data, RID &
 	}
 
 
-	//}
-	/*
-	else
-	{
-		getAttributes(tableName, attrVector);
-	}*/
-
-	//cout << "attrvectorSize: " << attrVector.size() << endl;
 
 	double size = attrVector.size() - 1;
 	int nullInd = ceil(size/8);
 
 
-	//char tempData[attrVector.size()*50];
-	//char *tempDataPtr = tempData;
 
-	//RID ridt;
-/*	RM_ScanIterator rmsiTable;
-	vector<string> attributes;
-	string attr = "table-name";
-	string returnattr = "version";
-	attributes.push_back(returnattr);*/
-	// returnattr = "version";
-	// attributes.push_back(returnattr);
-/*	char returnedData[16];
-
-	if(scan(string(TABLES_TABLE_NAME), attr, EQ_OP, &tableName, attributes, rmsiTable) != 0)
-	{
-		cerr << "Error occured while scanning!" << endl;
-		return 1;
-	}
-
-	if(rmsiTable.getNextTuple(rid, returnedData) == RM_EOF)
-	{
-		cerr << "Error occured while getting next tuple!" << endl;
-		return 2;
-	}
-
-	char * rData = returnedData;
-	int *versionPtr = (int *)(rData + 1);
-*/
-	/*
-	int version = 0;
-
-	if(attrVector.size()%8 == 0)
-	{
-		char c = 0;
-		memcpy(tempDataPtr, data, nullInd);
-		memcpy(tempDataPtr + nullInd,&c,1);
-		long nullNum = 0;
-		memcpy(&nullNum, tempDataPtr, nullInd + 1);
-		bitset<32> nullBits(nullNum);
-		nullBits>>=1;
-		nullNum = nullBits.to_ulong();
-		memcpy(tempDataPtr, &nullNum, nullInd + 1);
-		memcpy(tempDataPtr + nullInd + 1, &version, 4);
-		memcpy(tempDataPtr + nullInd + 5, (char*)data + nullInd, attrVector.size()*50 - nullInd - 1 - 4);
-	}
-	else
-	{
-		long nullNum = 0;
-		memcpy(&nullNum, data, nullInd);
-		bitset<32> nullBits(nullNum);
-		nullBits >>= 1;
-		nullNum = nullBits.to_ulong();
-		memcpy(tempDataPtr, &nullNum, nullInd);
-		memcpy(tempDataPtr + nullInd, &version, 4);
-		memcpy(tempDataPtr + nullInd + 4, (char*)data + nullInd, attrVector.size()*50 - nullInd - 4);
-	}
-*/
-	//rbfm->printRecord(attrVector,data);
 
 	if(tableName.compare(string(TABLES_TABLE_NAME)) == 0)
 	{
@@ -708,24 +587,10 @@ RC RelationManager::deleteTuple(const string &tableName, const RID &rid)
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 
 	vector<Attribute> attrVector;
-	/*
-	Attribute at;
-	at.name = "version";
-	at.type = TypeInt;
-	at.length = 4;
-	attrVector.push_back(at);
-*/
-	//if(tableName.compare(string(TABLES_TABLE_NAME)) == 0 || tableName.compare(string(COLUMNS_TABLE_NAME)) == 0)
-	//{
+
 	RC rc = getSystemAttributes(tableName, attrVector);
 			if(rc != 0)
 				return -1;//get attribute info failed
-	//}
-	/*
-	else
-	{
-			getAttributes(tableName, attrVector);
-	}*/
 
 
     if(tableName.compare(string(TABLES_TABLE_NAME)) == 0)
@@ -757,88 +622,18 @@ RC RelationManager::updateTuple(const string &tableName, const void *data, const
 
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 	vector<Attribute> attrVector;
-	/*
-	Attribute at;
-	at.name = "version";
-	at.type = TypeInt;
-	at.length = 4;
-	attrVector.push_back(at);
-*/
-	//if(tableName.compare(string(TABLES_TABLE_NAME)) == 0 || tableName.compare(string(COLUMNS_TABLE_NAME)) == 0)
-		//{
+
 	RC rc =getSystemAttributes(tableName, attrVector);
 	if(rc != 0)
 		return -1;//get attribute info failed
-		//}
-			/*
-		else
-		{
-			getAttributes(tableName, attrVector);
-		}*/
 
-	//FileHandle filehandle;
 
 	double size = attrVector.size() - 1;
 	int nullInd = ceil(size/8);
 
 
-	//char tempData[attrVector.size()*50];
-	//char *tempDataPtr = tempData;
 
-/*	RID ridt;
-	RM_ScanIterator rmsiTable;
-	vector<string> attributes;
-	string attr = "table-name";
-	string returnattr = "version";
-	attributes.push_back(returnattr);
-	// returnattr = "version";
-	// attributes.push_back(returnattr);
-	char returnedData[16];
 
-	if(scan(string(TABLES_TABLE_NAME), attr, EQ_OP, &tableName, attributes, rmsiTable)!= 0)
-	{
-		cerr << "Error occured while scanning!" << endl;
-		return 1;
-	}
-
-	if(rmsiTable.getNextTuple(ridt, returnedData) == RM_EOF)
-	{
-		cerr << "Error occured while getting next tuple!" << endl;
-		return 2;
-	}
-
-	char * rData = returnedData;
-	int *versionPtr = (int *)(rData + 1);
-*/
-	/*
-	int version = 0;
-
-	if(attrVector.size()%8 == 0)
-	{
-		char c = 0;
-		memcpy(tempDataPtr, data, nullInd);
-		memcpy(tempDataPtr + nullInd,&c,1);
-		long nullNum = 0;
-		memcpy(&nullNum, tempDataPtr, nullInd + 1);
-		bitset<32> nullBits(nullNum);
-		nullBits>>=1;
-		nullNum = nullBits.to_ulong();
-		memcpy(tempDataPtr, &nullNum, nullInd + 1);
-		memcpy(tempDataPtr + nullInd + 1, &version, 4);
-		memcpy(tempDataPtr + nullInd + 5, (char*)data + nullInd, attrVector.size()*50 - nullInd - 1 - 4);
-	}
-	else
-	{
-		long nullNum = 0;
-		memcpy(&nullNum, data, nullInd);
-		bitset<32> nullBits(nullNum);
-		nullBits >>= 1;
-		nullNum = nullBits.to_ulong();
-		memcpy(tempDataPtr, &nullNum, nullInd);
-		memcpy(tempDataPtr + nullInd, &version, 4);
-		memcpy(tempDataPtr + nullInd + 4, (char*)data + nullInd, attrVector.size()*50 - nullInd - 4);
-	}
-*/
     if(tableName.compare(string(TABLES_TABLE_NAME)) == 0)
     {
         rbfm->updateRecord(tabFileHandle, attrVector, data, rid);
@@ -864,27 +659,14 @@ RC RelationManager::readTuple(const string &tableName, const RID &rid, void *dat
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 	vector<Attribute> attrVector;
 	RC rc = -1;
-	/*
-	Attribute at;
-	at.name = "version";
-	at.type = TypeInt;
-	at.length = 4;
-	attrVector.push_back(at);
-*/
+
 	//if(tableName.compare(string(TABLES_TABLE_NAME)) == 0 || tableName.compare(string(COLUMNS_TABLE_NAME)) == 0)
 		//{
 	rc = getSystemAttributes(tableName, attrVector);
 	if(rc != 0)
 		return -1;//get attribute info failed
 		//}
-			/*
-		else
-		{
-			getAttributes(tableName, attrVector);
-		}*/
 
-	//FileHandle  fileHandle;
-	//void * tempData = malloc(attrVector.size()*50);
 
 
     if(tableName.compare(string(TABLES_TABLE_NAME)) == 0)
@@ -905,31 +687,6 @@ RC RelationManager::readTuple(const string &tableName, const RID &rid, void *dat
     }
 
 
-
-
-/*	double size = attrVector.size();
-	int nullInd = ceil(size/8);
-	long nullNum = 0;
-	memcpy(&nullNum, tempData, nullInd);
-
-	bitset<32> bitset(nullNum);
-	bitset<<=1;
-	//long nullBits = bitset.to_ulong();
-
-	int x = 0;
-	if(attrVector.size()%8 == 1)
-	{
-		x = nullInd - 1;
-	}
-
-	//write null byte info
-	memcpy(data,tempData, x);
-	char *charTempData = (char *) tempData;
-	char *charData = (char *) data;
-	charTempData += nullInd + 4;
-	charData += x;
-	memcpy(data, tempData, attrVector.size()*50 - nullInd - 4);
-*/
 	return rc;
 }
 
@@ -943,24 +700,14 @@ RC RelationManager::readAttribute(const string &tableName, const RID &rid, const
 {
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 	vector<Attribute> attrVector;
-	/*
-	Attribute at;
-	at.name = "version";
-	at.type = TypeInt;
-	at.length = 4;
-	attrVector.push_back(at);*/
 
 	//if(tableName.compare(string(TABLES_TABLE_NAME)) == 0 || tableName.compare(string(COLUMNS_TABLE_NAME)) == 0)
 		//{
 	RC rc = getSystemAttributes(tableName, attrVector);
 	if(rc != 0)
 		return -1;//get attribute info failed
-		//}
-			/*
-		else
-		{
-			getAttributes(tableName, attrVector);
-		}*/
+
+
     if(tableName.compare(string(TABLES_TABLE_NAME)) == 0)
 	{
          rbfm->readAttribute(tabFileHandle, attrVector,rid, attributeName, data);
@@ -983,17 +730,6 @@ RC RelationManager::readAttribute(const string &tableName, const RID &rid, const
 }
 
 
-RC RM_ScanIterator:: getNextTuple(RID &rid, void *data) {
-	return rbfm_scanIterator.getNextRecord(rid,data);
-}
-
-RC RM_ScanIterator::close()
-{
-	RC rc = -1;
-	rc = rbfm_scanIterator.close();
-	return rc;
-}
-
 
 RC RelationManager::scan(const string &tableName,
 		const string &conditionAttribute,
@@ -1003,24 +739,11 @@ RC RelationManager::scan(const string &tableName,
 		RM_ScanIterator &rm_ScanIterator)
 {
 	RecordBasedFileManager *rbfm = RecordBasedFileManager :: instance();
-	/*	vector<Attribute> attrVector;
-	Attribute at;
-	RC rc = 0;
-	at.name = "version";
-	at.type = TypeInt;
-	at.length = 4;
-	attrVector.push_back(at);
-	getAttributes(tableName, attrVector);
-	 */
+
 	RC rc = 0;
 	Attribute attr;
 	vector<Attribute> attrs;
-/*
-	attr.name = "version";
-	attr.type = TypeInt;
-	attr.length = 4;
-	attrs.push_back(attr);
-*/
+
 
 	rc = getSystemAttributes(tableName, attrs);
 	if(rc != 0)
@@ -1053,12 +776,6 @@ RC RelationManager::getSystemAttributes(const string &tableName, vector<Attribut
 	if(tableName.compare(string(TABLES_TABLE_NAME)) == 0)
 	{
 
-/*
-		attr.name = "version";
-		attr.type = TypeInt;
-		attr.length = 4;
-		attrs.push_back(attr);
-*/
 		attr.name = "table-id";
 		attr.type = TypeInt;
 		attr.length = 4;
@@ -1083,16 +800,7 @@ RC RelationManager::getSystemAttributes(const string &tableName, vector<Attribut
 	}
 	else if(tableName.compare(string(COLUMNS_TABLE_NAME)) == 0)
 	{
-		/*
-		attr.name = "version";
-		attr.type = TypeInt;
-		attr.length = 4;
-		attrs.push_back(attr);
-*/
-		/*   attr1.name = "version_deleted";
-		    attr1.type = TypeInt;
-		    attr1.length = 4;
-		    attrs1.push_back(attr1);*/
+
 
 		attr.name = "table-id";
 		attr.type = TypeInt;
@@ -1135,237 +843,85 @@ RC RelationManager::getSystemAttributes(const string &tableName, vector<Attribut
 // Extra credit work
 RC RelationManager::dropAttribute(const string &tableName, const string &attributeName)
 {
-/*
-	RID rid;
-	RM_ScanIterator rmsiTable;
-	vector<string> attributes;
-	string attr = "table-name";
-	string returnattr = "table-id";
-	attributes.push_back(returnattr);
-	// returnattr = "version";
-	// attributes.push_back(returnattr);
-	char returnedData[16];
 
-	if(scan(string(TABLES_TABLE_NAME), attr, EQ_OP, &tableName, attributes, rmsiTable) != 0)
-	{
-		cerr << "Error occured while scanning!" << endl;
-		return 1;
-	}
-
-	if(rmsiTable.getNextTuple(rid, returnedData) == RM_EOF)
-	{
-		cerr << "Error occured while getting next tuple!" << endl;
-		return 2;
-	}
-
-	char data[5*50];
-	readTuple(string(TABLES_TABLE_NAME), rid,data);
-	//Update Version
-	int *versionPtr = (int *) (data + 2);
-	int prevVersion = *versionPtr;
-	(*versionPtr)++;
-	updateTuple(string(TABLES_TABLE_NAME), data,rid);
-
-	RM_ScanIterator rmsiColumn;
-	attr = "table-id";
-	returnattr = "version";
-	int* tableIDPtr = (int *) (((char *) returnedData) + 1);
-	//int* tableVersionPtr = tableIDPtr + 1;
-	attributes.clear();
-	attributes.push_back(returnattr);
-	//returnattr = "column-name";
-	//attributes.push_back(returnattr);
-	//attributes.push_back(attributeName);
-	char Data[50];
-
-	if(scan(string(COLUMNS_TABLE_NAME), attr, EQ_OP, tableIDPtr, attributes, rmsiColumn) != 0)
-	{
-		cerr << "Error occured while scanning!" << endl;
-		return 3;
-	}
-
-
-	while(rmsiColumn.getNextTuple(rid,Data) != RM_EOF) {
-		int *rData = (int *) (Data + 1);
-		if (prevVersion == *rData) {
-			char tupl[50 * 5];
-			char *tuple = tupl;
-			readTuple(string(COLUMNS_TABLE_NAME), rid, tuple);
-			tuple++;//Pass null byte
-			int *v = (int *) tuple;//Version number;
-			*v = (*v) + 1;//Updated version number
-			v++;//Pointing to table-id
-			v++;//Pointing to the length of column-name
-			int columnSize = (*v) + 1;
-			char columnName[columnSize];
-			v++;//Pointing to the column name
-			char *columnPtr = (char *) v;
-			strncpy(columnName, columnPtr, columnSize);
-
-			if (attributeName.compare(columnName) == 0) {
-				columnPtr += columnSize - 1;
-				int *columnType = (int *) columnPtr;
-				*columnType = TypeDeleted;
-			}
-
-			insertTuple(string(COLUMNS_TABLE_NAME), Data, rid);
-			cout << "InsertedPage:" << rid.pageNum << "  " << "InsertedSlot:" << rid.slotNum << endl;
-
-		}
-	}
-
-	/*        int *rData = (int *) (Data + 1);
-        int version = *rData;
-        int* columnNameLengthPtr = rData + 1;
-        char columnName[(*columnNameLengthPtr) + 1];
-        char *string = (char *) columnNameLengthPtr;
-        strncpy(columnName, (string + 4), *columnNameLengthPtr);
-
-        if(tableName.compare(columnName))
-        {
-            char buffer[5*50];
-            readTuple(string(COLUMNS_TABLE_NAME), rid, buffer);
-            buffer = buffer + 5;  //1 for null and 4 for version_added
-            cout << "version_deleted was:" << *((int *) buffer) << endl;
-            int *versionD = (int *) buffer;
-	 *versionD = version;//set to tables version.
-            cout << "version_deleted is now:" << version << endl;
-            updateTuple(string(COLUMNS_TABLE_NAME),(buffer - 5),rid);
-            return 0;
-        }
-        x++;
-    }
-    cout  << x << endl;
-	 */
 	return -1;
 }
 
 // Extra credit work
 RC RelationManager::addAttribute(const string &tableName, const Attribute &attr)
 {
-	/*
-	//Copy the drop attribute code here
-	//Use the following code snippet to convert attr to record with null info
-	//Then the rest is sikine gore
-
-	RID rid;
-	RM_ScanIterator rmsiTable;
-	vector<string> attributes;
-	string attr1 = "table-name";
-	string returnattr = "table-id";
-	attributes.push_back(returnattr);
-	// returnattr = "version";
-	// attributes.push_back(returnattr);
-	char returnedData[16];
-
-	if(scan(string(TABLES_TABLE_NAME), attr1, EQ_OP, &tableName, attributes, rmsiTable)!= 0)
-	{
-		cerr << "Error occured while scanning!" << endl;
-		return 1;
-	}
-
-	if(rmsiTable.getNextTuple(rid, returnedData) == RM_EOF)
-	{
-		cerr << "Error occured while getting next tuple!" << endl;
-		return 2;
-	}
-
-	char data[5*50];
-	readTuple(string(TABLES_TABLE_NAME), rid,data);
-	//Update Version
-	int *versionPtr = (int *) (data + 2);
-	int prevVersion = *versionPtr;
-	(*versionPtr)++;
-	updateTuple(string(TABLES_TABLE_NAME), data,rid);
-
-	RM_ScanIterator rmsiColumn;
-	attr1 = "table-id";
-	returnattr = "version";
-	int* tableIDPtr = (int *) (((char *) returnedData) + 1);
-	//int* tableVersionPtr = tableIDPtr + 1;
-	attributes.clear();
-	attributes.push_back(returnattr);
-	//returnattr = "column-name";
-	//attributes.push_back(returnattr);
-	//attributes.push_back(attributeName);
-
-
-	char Data[50];
-	if(scan(string(COLUMNS_TABLE_NAME), attr1, EQ_OP, tableIDPtr, attributes, rmsiColumn) != 0)
-	{
-		cerr << "Error occured while scanning!" << endl;
-		return 3;
-	}
-
-	int i = 0;
-	while(rmsiColumn.getNextTuple(rid,Data) != RM_EOF) {
-		int *rData = (int *) (Data + 1);
-		if (prevVersion == *rData) {
-			char tupl[50 * 5];
-			char *tuple = tupl;
-			readTuple(string(COLUMNS_TABLE_NAME), rid, tuple);
-			tuple++;//Pass null byte
-			int *v = (int *) tuple;//Version number;
-			*v = (*v) + 1;//Updated version number
-			i++;
-			insertTuple(string(COLUMNS_TABLE_NAME), Data, rid);
-			cout << "InsertedPage:" << rid.pageNum << "  " << "InsertedSlot:" << rid.slotNum << endl;
-		}
-	}
-
-	/*****START OF PREPARING COLUMN BUFFER******/
-	/*
-	char buffer2[5*50];
-	char* buffer = buffer2;
-	//char *buffer1 = buffer;
-
-	memset(buffer, 0, 1);
-	buffer += 1;
-	//version_added
-	memcpy(buffer, versionPtr, 4);
-	buffer += 4;
-	//version_deleted
-	/*  version = -1;
-      memcpy(buffer, &version, 4);
-      version = 0;
-      buffer += 4;*/
-/*
-	//tableid
-	memcpy(buffer,tableIDPtr,4);
-	buffer += 4;
-
-	//Attribute attr = attrs[i];
-	//column-name
-
-	int length = attr.name.length();
-	memcpy(buffer,&length,4);
-	buffer += 4;
-
-	char name[length];
-	strcpy(name,attr.name.c_str());
-	memcpy(buffer, name, length);
-	buffer += length;
-
-	//type
-	memcpy(buffer,&(attr.type), 4);
-	buffer += 4;
-	//length
-	memcpy(buffer,&(attr.length), 4);
-	buffer += 4;
-	//position
-	int position = i + 1;
-	memcpy(buffer, &position, 4);
-	buffer += 4;
-
-	insertTuple(string(COLUMNS_TABLE_NAME), buffer, rid);
-	cout << "InsertedPage:" << rid.pageNum << "  " << "InsertedSlot:" << rid.slotNum << endl;
-*/
-
-	/*****END OF PREPARING BUFFER******/
 
 
 	return -1;
 }
 
 
+
+RC RelationManager::createIndex(const string &tableName, const string &attributeName)
+{
+	vector<Attribute> attrs;
+	Attribute attr;
+	attr.length = PAGE_SIZE;
+	attr.name = attributeName;
+	attr.type = TypeVarChar;
+	attrs.push_back(attr);
+
+	RC rc = createTable(tableName, attrs);
+
+	return rc;
+}
+
+RC RelationManager::destroyIndex(const string &tableName, const string &attributeName)
+{
+	RC rc  = deleteTable(tableName);
+	return rc;
+}
+
+RC RelationManager::indexScan(const string &tableName,
+                      const string &attributeName,
+                      const void *lowKey,
+                      const void *highKey,
+                      bool lowKeyInclusive,
+                      bool highKeyInclusive,
+                      RM_IndexScanIterator &rm_IndexScanIterator)
+{
+	IndexManager *ix = IndexManager :: instance();
+
+	RC rc = 0;
+	Attribute attr;
+	vector<Attribute> attrs;
+	rc = getSystemAttributes(tableName, attrs);
+	if(rc != 0)
+		return -1;//get attribute info failed
+
+	int targetAttr = -1;
+	for(unsigned i = 0 ; i < attrs.size() ; i ++)
+	{
+		if(attrs[i].name == attributeName)
+		{
+			targetAttr = i;
+			break;
+		}
+	}
+	if(targetAttr == -1)
+		return -1; //This index is not for the attribute
+
+
+	if(tableName.compare(string(TABLES_TABLE_NAME)) == 0)
+	{
+		return -1;//Catalog file is not index
+
+	}
+	else if(tableName.compare(string(COLUMNS_TABLE_NAME)) == 0)
+	{
+		return -1;//Catalog file is not index
+	}
+	else
+	{
+		rc = ix->openFile(tableName,rm_IndexScanIterator.ixFileHandle);
+		rc = ix->scan(rm_IndexScanIterator.ixFileHandle, attrs[targetAttr],
+				lowKey,highKey,lowKeyInclusive,highKeyInclusive,rm_IndexScanIterator.ix_scanIterator);
+	}
+	return rc;
+}
 
