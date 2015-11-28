@@ -97,8 +97,8 @@ public:
   unsigned numOfPages;
   unsigned numOfRecords;
   FileHandle *fileHandle;
-  void *tempPage;
-  void *tempPage1;
+  char *tempPage;
+  char *tempPage1;
   const void *value;
   CompOp compOp;
 
@@ -147,6 +147,7 @@ public:
 
 
   //-----------------custom functions--------------------------------------------------------------------------
+  bool isNullField(const vector<Attribute> &recordDescriptor,const void *data, unsigned fieldNum);
 
   RecordDic getRecordFieldOffset(const void *recordToProcess, unsigned fieldNum);
   RecordDic getRecordFieldSize(const void *recordToProcess, unsigned fieldNum);

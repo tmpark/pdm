@@ -13,6 +13,7 @@ using namespace std;
 # define RM_EOF (-1)  // end of a scan operator
 #define TABLES_TABLE_NAME "Tables"
 #define COLUMNS_TABLE_NAME "Columns"
+#define IX_INDICATOR "_ix_"
 
 
 
@@ -28,7 +29,6 @@ public:
 
   RBFM_ScanIterator rbfm_scanIterator;
   FileHandle fileHandle;
-
 };
 
 // RM_IndexScanIterator is an iterator to go through index entries
@@ -75,8 +75,6 @@ public:
   // The format is the same as printRecord().
   RC printTuple(const vector<Attribute> &attrs, const void *data);
 
-  RC getSystemAttributes(const string &tableName, vector<Attribute> &attrs);
-
   RC readAttribute(const string &tableName, const RID &rid, const string &attributeName, void *data);
 
   // Scan returns an iterator to allow the caller to go through the results one by one.
@@ -101,6 +99,14 @@ public:
                         bool lowKeyInclusive,
                         bool highKeyInclusive,
                         RM_IndexScanIterator &rm_IndexScanIterator);
+
+
+  int getTableIDWithRid(const string &tableName, RID &rid);
+  RC getAttributeList(unsigned tableID,vector<Attribute> &attrs);
+  RC getTTAttributeList(vector<Attribute> &attrs);
+  RC getCTAttributeList(vector<Attribute> &attrs);
+  RC makeTTTuple(const string &tableName, void *tuple);
+  RC makeCTTuple(Attribute attr, unsigned attrNum, void *tuple);
 
 
 

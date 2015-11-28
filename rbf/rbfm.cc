@@ -55,6 +55,14 @@ RC RecordBasedFileManager::closeFile(FileHandle &fileHandle) {
 	return success;
 }
 
+bool RecordBasedFileManager::isNullField(const vector<Attribute> &recordDescriptor,const void *data, unsigned fieldNum)
+{
+	unsigned positionOfByte = floor((double)fieldNum / 8);
+	unsigned positionOfNullIndicator = fieldNum % 8;
+	char *nullPtr = (char*)data;
+	return nullPtr[positionOfByte] & (1 << (7 - positionOfNullIndicator));
+}
+
 //----------------------------Record related helper-------------------------------------------------------------------
 
 RecordDic RecordBasedFileManager::getRecordFieldOffset(const void *recordToProcess, unsigned fieldNum)
@@ -1245,10 +1253,16 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
 			if(fieldSize != -1)
 			{
 				memset(data,0,1);
-				memcpy((char*)data+1,recordToProcess+getRecordFieldOffset(recordToProcess,i),fieldSize);
+				if(recordDescriptor[i].type == TypeVarChar)
+				{
+					memcpy((char*)data + 1, &fieldSize, sizeof(int));
+					memcpy((char*)data + 1 + sizeof(int),recordToProcess+getRecordFieldOffset(recordToProcess,i),fieldSize);
+				}
+				else
+					memcpy((char*)data+1,recordToProcess+getRecordFieldOffset(recordToProcess,i),fieldSize);
 			}
 			else  //NULL
-				memset(data,1,1);
+				memset(data,1 << 7 ,1);
 			return 0;
 		}
 
@@ -1271,10 +1285,10 @@ RC RecordBasedFileManager::scan(FileHandle &fileHandle,
 	rbfm_ScanIterator.fileHandle = &fileHandle;
 	rbfm_ScanIterator.value = value;
 	rbfm_ScanIterator.compOp = compOp;
-	rbfm_ScanIterator.tempPage = tempPage;//malloc(sizeof(PAGE_SIZE));
-	rbfm_ScanIterator.tempPage1 = tempPage1;//malloc(sizeof(PAGE_SIZE));
 	rbfm_ScanIterator.conditionAttrFieldNum = -1;
 	rbfm_ScanIterator.conditionAttrFieldType = -1;
+	rbfm_ScanIterator.tempPage = tempPage;//(char*)malloc(PAGE_SIZE);
+	rbfm_ScanIterator.tempPage1 = tempPage1;//(char*)malloc(PAGE_SIZE);
 
 	for(unsigned i = 0 ; i < recordDescriptor.size() ; i++)
 	{
@@ -1581,8 +1595,10 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 RC RBFM_ScanIterator::close()
 {
 	RC rc = 0;
+
 	//free(tempPage);
 	//free(tempPage1);
+
 	return rc;
 }
 

@@ -2523,7 +2523,6 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 RC IX_ScanIterator::close()
 {
 
-
 	indexManager = NULL;
 	op = EQ_OP;
 	currentSlot = 0;
