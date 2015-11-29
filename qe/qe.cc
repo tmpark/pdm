@@ -60,76 +60,87 @@ RC Filter::getNextTuple(void *data)
 	return 0;
 }
 
-BNLJoin::BNLJoin(Iterator *leftIn,            // Iterator of input R
-		TableScan *rightIn,           // TableScan Iterator of input S
-		const Condition &condition,   // Join condition
-		const unsigned numPages       // # of pages that can be loaded into memory,
-		//   i.e., memory block size (decided by the optimizer)
-)
-{
-	leftIt = leftIn;
-	rightIt = rightIn;
-	cond = condition;
-	this->numPages = numPages;
-	totalBufferSize = numPages*PAGE_SIZE;
-	buffer = new char[totalBufferSize];
 
-	unsigned occupiedSpace = 0;
-	char tuple[WHOLE_SIZE_FOR_ENTRIES];
-	vector<Attribute> attrs;
-	leftIt->getAttributes(attrs);
-	while(occupiedSpace <= totalBufferSize)
-	{
-		if(leftIt->getNextTuple(tuple) != 0)
-		{
-			hasMore = false;
-			//return something or just return;
-		}
-		unsigned tupleSize = getSizeOfTuple(attrs, tuple);
-		//add tuple to buffer
-		memcpy(buffer + occupiedSpace, tuple, tupleSize);
-		occupiedSpace = occupiedSpace + tupleSize;
-
-
-		string tableName;
-		string attrName;
-		split(cond.lhsAttr,tableName, attrName);
-		AttrType type = getType(attrs, attrName);
-
-		string key;
-		if(type == TypeVarChar)
-		{
-			getValueOfAttr(tuple, attrs, attrName, key);
-		}
-		else if(type == TypeInt)
-		{
-			int value = 0;
-			getValueOfAttr(tuple, attrs, attrName, value);
-//			key = std::to_string(value);
-		}
-		else if(type == TypeReal)
-		{
-			float value = 0;
-			getValueOfAttr(tuple, attrs, attrName, value);
-//			key = std::to_string(value);
-		}
-		else
-		{
-			cout << "ERROR" << endl;
-		}
-
+//BNLJoin::BNLJoin(Iterator *leftIn,            // Iterator of input R
+//		TableScan *rightIn,           // TableScan Iterator of input S
+//		const Condition &condition,   // Join condition
+//		const unsigned numPages       // # of pages that can be loaded into memory,
+//		//   i.e., memory block size (decided by the optimizer)
+//)
+//{
+//	leftIt = leftIn;
+//	rightIt = rightIn;
+//	cond = condition;
+//	this->numPages = numPages;
+//	totalBufferSize = numPages*PAGE_SIZE;
+//	//buffer = new char[totalBufferSize];
+//
+//	unsigned occupiedSpace = 0;
+//	char tuple[WHOLE_SIZE_FOR_ENTRIES];
+//	vector<Attribute> attrs;
+//	leftIt->getAttributes(attrs);
+//	while(occupiedSpace <= totalBufferSize)
+//	{
+//		if(leftIt->getNextTuple(tuple) != 0)
+//		{
+//			hasMore = false;
+//			//return something or just return;
+//		}
+//		unsigned tupleSize = getSizeOfTuple(attrs, tuple);
+//		//add tuple to buffer
+//		char *buffer = new char[tupleSize];
+//		memcpy(buffer + occupiedSpace, tuple, tupleSize);
+//		bufferV.push_back((void *) buffer);
+//		occupiedSpace = occupiedSpace + tupleSize;
+//
+//
+//		string tableName;
+//		string attrName;
+//		split(cond.lhsAttr,tableName, attrName);
+//		AttrType type = getType(attrs, attrName);
+//
+//		string key;
+//		if(type == TypeVarChar)
+//		{
+//			getValueOfAttr(tuple, attrs, attrName, key);
+//		}
+//		else if(type == TypeInt)
+//		{
+//			int value = 0;
+//			getValueOfAttr(tuple, attrs, attrName, value);
+//			char valueChar[64];
+//			itoa(value, valueChar, 10);
+//			key = string(valueChar);
+//		}
+//		else if(type == TypeReal)
+//		{
+//			float value = 0;
+//			getValueOfAttr(tuple, attrs, attrName, value);
+//			char valueChar[64];
+//			itoa(value, valueChar, 10);
+//			key = string(valueChar);
+//			//key = std::to_string(value);
+//		}
+//		else
+//		{
+//			cout << "ERROR" << endl;
+//		}
+//
 //		auto got = tuplesMap.find(key);
 //		if(got == tuplesMap.end())
-		{
-
-		}
-	}
-}
-
-BNLJoin::~BNLJoin()
-{
-	delete[] buffer;
-}
+//		{
+//
+//		}
+//	}
+//}
+//
+//BNLJoin::~BNLJoin()
+//{
+//	for(int i = 0; i < bufferV.size(); i++)
+//	{
+//		delete[] bufferV[i];
+//	}
+//}
 
 ////////////////////////////////////////////
 ///////////////HELPERS//////////////////////
