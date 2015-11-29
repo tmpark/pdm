@@ -230,58 +230,56 @@ unsigned Iterator::getSizeOfTuple(const vector<Attribute> &recordDescriptor,cons
 
 RC Iterator::getValueOfAttr(const void* data, vector<Attribute> &attrs, string &attrName, string &value)
 {
-    unsigned numberOfFields = attrs.size();
+	unsigned numberOfFields = attrs.size();
 
-    //exteriorRecord related
-    unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
-    unsigned char *nullsIndicator = (unsigned char*)data;
-    //char *exteriorRecordField = (char*)exteriorRecord + numberOfBytesForNullIndicator;
+	//exteriorRecord related
+	unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
+	unsigned char *nullsIndicator = (unsigned char*)data;
+	//char *exteriorRecordField = (char*)exteriorRecord + numberOfBytesForNullIndicator;
 
-    bool nullExist = false;
+	bool nullExist = false;
 
-    int exteriorRecordOffset = 0;
-    exteriorRecordOffset = exteriorRecordOffset + numberOfBytesForNullIndicator;
+	int exteriorRecordOffset = 0;
+	exteriorRecordOffset = exteriorRecordOffset + numberOfBytesForNullIndicator;
 
 
-    for (unsigned i = 0 ;i < numberOfFields ; i++)
-    {
-        unsigned positionOfByte = floor((double)i / 8);
-        unsigned positionOfNullIndicator = i % 8;
-        nullExist = nullsIndicator[positionOfByte] & (1 << (7 - positionOfNullIndicator));
+	for (unsigned i = 0 ;i < numberOfFields ; i++)
+	{
+		unsigned positionOfByte = floor((double)i / 8);
+		unsigned positionOfNullIndicator = i % 8;
+		nullExist = nullsIndicator[positionOfByte] & (1 << (7 - positionOfNullIndicator));
 
-        if(!nullExist)//Not Null Value
-        {
+		if(attrName.compare(attrs.at(i).name) == 0)
+		{
+			if(nullExist)
+				return 1;
 
-            if(attrs[i].type == TypeVarChar)
-            {
-                char *stringLength = (char*)data + exteriorRecordOffset;
-                int stringLength_int = *((int*)stringLength);
-                exteriorRecordOffset = exteriorRecordOffset + sizeof(int); //length field
+			char *stringLength = (char*)data + exteriorRecordOffset;
+			int stringLength_int = *((int*)stringLength);
+			exteriorRecordOffset = exteriorRecordOffset + sizeof(int); //length field
+			value = string((char *)data + exteriorRecordOffset, stringLength_int);
+			return 0;
+		}
+		else
+		{
+			if(nullExist)
+				continue;
 
-                if(attrName.compare(attrs.at(i).name) == 0)
-                {
-                    value = string((char *)data + exteriorRecordOffset, stringLength_int);
-                    return 0;
-                }
+			if(attrs[i].type == TypeInt)
+				exteriorRecordOffset = exteriorRecordOffset + sizeof(int);
+			else if(attrs[i].type ==TypeReal)
+				exteriorRecordOffset = exteriorRecordOffset + sizeof(float);
+			else if(attrs[i].type ==TypeVarChar)
+			{
+				char *stringLength = (char*)data + exteriorRecordOffset;
+				int stringLength_int = *((int*)stringLength);
+				exteriorRecordOffset = exteriorRecordOffset + sizeof(int); //length field
+				exteriorRecordOffset = exteriorRecordOffset + stringLength_int;// string
+			}
+		}
 
-                exteriorRecordOffset = exteriorRecordOffset + stringLength_int;// string
-            }
-            else if (attrs[i].type == TypeInt)
-            {
-                exteriorRecordOffset = exteriorRecordOffset + attrs[i].length;
-            }
-            else if (attrs[i].type ==TypeReal)
-            {
-                exteriorRecordOffset = exteriorRecordOffset + attrs[i].length;
-            }
-        }
-        else
-        {
-            //blablalbalbla
-            //return -1;
-        }
-    }
-    return -1;
+	}
+	return -1;
 }
 
 template <typename T>
@@ -306,39 +304,41 @@ RC Iterator::getValueOfAttr(const void* data, vector<Attribute> &attrs, string &
         unsigned positionOfNullIndicator = i % 8;
         nullExist = nullsIndicator[positionOfByte] & (1 << (7 - positionOfNullIndicator));
 
-        if(!nullExist)//Not Null Value
-        {
-            if(attrs[i].type == TypeVarChar)
-            {
-                char *stringLength = (char*)data + exteriorRecordOffset;
-                int stringLength_int = *((int*)stringLength);
-                exteriorRecordOffset = exteriorRecordOffset + sizeof(int); //length field
-                exteriorRecordOffset = exteriorRecordOffset + stringLength_int;// string
-            }
-            else if (attrs[i].type == TypeInt)
-            {
-                if(attrName.compare(attrs.at(i).name) == 0)
-                {
-                    value = *((int *) (nullsIndicator + exteriorRecordOffset));
-                    return 0;
-                }
-                exteriorRecordOffset = exteriorRecordOffset + sizeof(int);
-            }
-            else if (attrs[i].type ==TypeReal)
-            {
-                if(attrName.compare(attrs.at(i).name) == 0)
-                {
-                    value = *((float *) (nullsIndicator + exteriorRecordOffset));
-                    return 0;
-                }
-                exteriorRecordOffset = exteriorRecordOffset + sizeof(float);
-            }
-        }
-        else
-        {
-            //blablalbalbla
-            //return -1;
-        }
+
+		if(attrName.compare(attrs.at(i).name) == 0)
+		{
+			if(nullExist)
+				return 1;
+
+			if(attrs[i].type == TypeInt)
+			{
+                value = *((int *) (nullsIndicator + exteriorRecordOffset));
+                return 0;
+			}
+			else if(attrs[i].type ==TypeReal)
+			{
+                value = *((float *) (nullsIndicator + exteriorRecordOffset));
+                return 0;
+			}
+		}
+		else
+		{
+			if(nullExist)
+				continue;
+
+			if(attrs[i].type == TypeInt)
+				exteriorRecordOffset = exteriorRecordOffset + sizeof(int);
+			else if(attrs[i].type ==TypeReal)
+				exteriorRecordOffset = exteriorRecordOffset + sizeof(float);
+			else if(attrs[i].type ==TypeVarChar)
+			{
+				char *stringLength = (char*)data + exteriorRecordOffset;
+				int stringLength_int = *((int*)stringLength);
+				exteriorRecordOffset = exteriorRecordOffset + sizeof(int); //length field
+				exteriorRecordOffset = exteriorRecordOffset + stringLength_int;// string
+			}
+		}
+
     }
     return -1;
 }
