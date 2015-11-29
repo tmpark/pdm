@@ -7,6 +7,8 @@
 #include <cstdio> //added library
 #include <iostream> //added library
 #include <fstream> //added library
+#include <stdio.h>
+#include <stdlib.h>
 
 Filter::Filter(Iterator* input, const Condition &condition)
 {
@@ -17,163 +19,163 @@ Filter::Filter(Iterator* input, const Condition &condition)
 
 RC Filter::getNextTuple(void *data)
 {
-    //    char tableName[WHOLE_SIZE_FOR_ENTRIES];
-    //    char attrName[WHOLE_SIZE_FOR_ENTRIES];
-    //string tableName;
-    //string attrName;
-    //    char tuple[WHOLE_SIZE_FOR_ENTRIES];
+	//    char tableName[WHOLE_SIZE_FOR_ENTRIES];
+	//    char attrName[WHOLE_SIZE_FOR_ENTRIES];
+	//string tableName;
+	//string attrName;
+	//    char tuple[WHOLE_SIZE_FOR_ENTRIES];
 
-    //split(cond.lhsAttr,tableName, attrName);
-    //AttrType type = getType(attrs, attrName);
-    AttrType type = cond.rhsValue.type;
+	//split(cond.lhsAttr,tableName, attrName);
+	//AttrType type = getType(attrs, attrName);
+	AttrType type = cond.rhsValue.type;
 
-    while (it->getNextTuple(data) == 0)
-    {
-        if(type == TypeVarChar)
-        {
-            string value;
-            if(getValueOfAttr(data, attrs, cond.lhsAttr, value) != 0)
-            {
-                cout << "ERRORINT" << endl;
-                return -1;
-            }
-            if(cond.bRhsIsAttr == true)
-            {
-                cout <<  "ERROR: Righthandside is attr" << endl;
-                return -1;
-            }
-            //FIXME: I think they assumed that they will not provide string in rhside
-            int *length = (int *)(cond.rhsValue.data);
-            string s((char *)(length + 1), *length);
-            if(compareValues(value, s, cond.op) == true)
-            {
-                return 0;
-            }
-        }
-        else if(type == TypeInt)
-        {
-            int value;
-            if(getValueOfAttr(data, attrs, cond.lhsAttr, value) != 0)
-            {
-                cout << "ERRORINT" << endl;
-                return -1;
-            }
-            if(cond.bRhsIsAttr == true)
-            {
-                cout <<  "ERROR: Righthandside is attr" << endl;
-                return -1;
-            }
-            int a = *(int *)((cond.rhsValue).data);
-            int b = value;
-            if(compareValues(value, *(int *)((cond.rhsValue).data), cond.op) == true)
-            {
-                return 0;
-            }
-        }
-        else if(type == TypeReal)
-        {
-            float value;
-            if(getValueOfAttr(data, attrs, cond.lhsAttr, value) != 0)
-            {
-                cout << "ERRORREAL" << endl;
-                return -1;
-            }
-            if(cond.bRhsIsAttr == true)
-            {
-                cout <<  "ERROR: Righthandside is attr" << endl;
-                return -1;
-            }
-            if(compareValues(value, *(float *)cond.rhsValue.data, cond.op) == true)
-            {
-                return 0;
-            }
-        }
+	while (it->getNextTuple(data) == 0)
+	{
+		if(type == TypeVarChar)
+		{
+			string value;
+			if(getValueOfAttr(data, attrs, cond.lhsAttr, value) != 0)
+			{
+				cout << "ERRORINT" << endl;
+				return -1;
+			}
+			if(cond.bRhsIsAttr == true)
+			{
+				cout <<  "ERROR: Righthandside is attr" << endl;
+				return -1;
+			}
+			//FIXME: I think they assumed that they will not provide string in rhside
+			int *length = (int *)(cond.rhsValue.data);
+			string s((char *)(length + 1), *length);
+			if(compareValues(value, s, cond.op) == true)
+			{
+				return 0;
+			}
+		}
+		else if(type == TypeInt)
+		{
+			int value;
+			if(getValueOfAttr(data, attrs, cond.lhsAttr, value) != 0)
+			{
+				cout << "ERRORINT" << endl;
+				return -1;
+			}
+			if(cond.bRhsIsAttr == true)
+			{
+				cout <<  "ERROR: Righthandside is attr" << endl;
+				return -1;
+			}
+			int a = *(int *)((cond.rhsValue).data);
+			int b = value;
+			if(compareValues(value, *(int *)((cond.rhsValue).data), cond.op) == true)
+			{
+				return 0;
+			}
+		}
+		else if(type == TypeReal)
+		{
+			float value;
+			if(getValueOfAttr(data, attrs, cond.lhsAttr, value) != 0)
+			{
+				cout << "ERRORREAL" << endl;
+				return -1;
+			}
+			if(cond.bRhsIsAttr == true)
+			{
+				cout <<  "ERROR: Righthandside is attr" << endl;
+				return -1;
+			}
+			if(compareValues(value, *(float *)cond.rhsValue.data, cond.op) == true)
+			{
+				return 0;
+			}
+		}
 
-    }
-    return -1;
+	}
+	return -1;
 }
 
 
-//BNLJoin::BNLJoin(Iterator *leftIn,            // Iterator of input R
-//		TableScan *rightIn,           // TableScan Iterator of input S
-//		const Condition &condition,   // Join condition
-//		const unsigned numPages       // # of pages that can be loaded into memory,
-//		//   i.e., memory block size (decided by the optimizer)
-//)
-//{
-//	leftIt = leftIn;
-//	rightIt = rightIn;
-//	cond = condition;
-//	this->numPages = numPages;
-//	totalBufferSize = numPages*PAGE_SIZE;
-//	//buffer = new char[totalBufferSize];
-//
-//	unsigned occupiedSpace = 0;
-//	char tuple[WHOLE_SIZE_FOR_ENTRIES];
-//	vector<Attribute> attrs;
-//	leftIt->getAttributes(attrs);
-//	while(occupiedSpace <= totalBufferSize)
-//	{
-//		if(leftIt->getNextTuple(tuple) != 0)
-//		{
-//			hasMore = false;
-//			//return something or just return;
-//		}
-//		unsigned tupleSize = getSizeOfTuple(attrs, tuple);
-//		//add tuple to buffer
-//		char *buffer = new char[tupleSize];
-//		memcpy(buffer + occupiedSpace, tuple, tupleSize);
-//		bufferV.push_back((void *) buffer);
-//		occupiedSpace = occupiedSpace + tupleSize;
-//
-//
-//		string tableName;
-//		string attrName;
-//		split(cond.lhsAttr,tableName, attrName);
-//		AttrType type = getType(attrs, attrName);
-//
-//		string key;
-//		if(type == TypeVarChar)
-//		{
-//			getValueOfAttr(tuple, attrs, attrName, key);
-//		}
-//		else if(type == TypeInt)
-//		{
-//			int value = 0;
-//			getValueOfAttr(tuple, attrs, attrName, value);
-//			char valueChar[64];
-//			itoa(value, valueChar, 10);
-//			key = string(valueChar);
-//		}
-//		else if(type == TypeReal)
-//		{
-//			float value = 0;
-//			getValueOfAttr(tuple, attrs, attrName, value);
-//			char valueChar[64];
-//			itoa(value, valueChar, 10);
-//			key = string(valueChar);
-//			//key = std::to_string(value);
-//		}
-//		else
-//		{
-//			cout << "ERROR" << endl;
-//		}
-//
-//		auto got = tuplesMap.find(key);
-//		if(got == tuplesMap.end())
-//		{
-//
-//		}
-//	}
-//}
-//
-//BNLJoin::~BNLJoin()
-//{
-//	for(int i = 0; i < bufferV.size(); i++)
-//	{
-//		delete[] bufferV[i];
-//	}
-//}
+BNLJoin::BNLJoin(Iterator *leftIn,            // Iterator of input R
+		TableScan *rightIn,           // TableScan Iterator of input S
+		const Condition &condition,   // Join condition
+		const unsigned numPages       // # of pages that can be loaded into memory,
+		//   i.e., memory block size (decided by the optimizer)
+)
+{
+	leftIt = leftIn;
+	rightIt = rightIn;
+	cond = condition;
+	this->numPages = numPages;
+	totalBufferSize = numPages*PAGE_SIZE;
+	//buffer = new char[totalBufferSize];
+
+	unsigned occupiedSpace = 0;
+	char tuple[WHOLE_SIZE_FOR_ENTRIES];
+	vector<Attribute> attrs;
+	leftIt->getAttributes(attrs);
+	while(occupiedSpace <= totalBufferSize)
+	{
+		if(leftIt->getNextTuple(tuple) != 0)
+		{
+			hasMore = false;
+			//return something or just return;
+		}
+		unsigned tupleSize = getSizeOfTuple(attrs, tuple);
+		//add tuple to buffer
+		char *buffer = new char[tupleSize];
+		memcpy(buffer, tuple, tupleSize);
+		bufferV.push_back((void *)buffer);
+		occupiedSpace = occupiedSpace + tupleSize;
+
+
+		//string tableName;
+		//string attrName;
+		//split(cond.lhsAttr,tableName, attrName);
+		AttrType type = getType(attrs, cond.lhsAttr);
+
+		string key;
+		if(type == TypeVarChar)
+		{
+			getValueOfAttr(tuple, attrs, cond.lhsAttr, key);
+		}
+		else if(type == TypeInt)
+		{
+			int value = 0;
+			getValueOfAttr(tuple, attrs, cond.lhsAttr, value);
+			char valueChar[64];
+			snprintf(valueChar, sizeof(valueChar), "%d", value);
+			key = string(valueChar);
+		}
+		else if(type == TypeReal)
+		{
+			float value = 0;
+			getValueOfAttr(tuple, attrs, cond.lhsAttr, value);
+			char valueChar[64];
+			snprintf(valueChar, sizeof(valueChar), "%d", value);
+			key = string(valueChar);
+			//key = std::to_string(value);
+		}
+		else
+		{
+			cout << "ERROR" << endl;
+		}
+
+		auto got = tuplesMap.find(key);
+		if(got == tuplesMap.end())
+		{
+
+		}
+	}
+}
+
+BNLJoin::~BNLJoin()
+{
+	for(unsigned i = 0; i < bufferV.size(); i++)
+	{
+		delete[] bufferV[i];
+	}
+}
 
 ////////////////////////////////////////////
 ///////////////HELPERS//////////////////////
@@ -230,117 +232,182 @@ unsigned Iterator::getSizeOfTuple(const vector<Attribute> &recordDescriptor,cons
 
 RC Iterator::getValueOfAttr(const void* data, vector<Attribute> &attrs, string &attrName, string &value)
 {
-    unsigned numberOfFields = attrs.size();
+	unsigned numberOfFields = attrs.size();
 
-    //exteriorRecord related
-    unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
-    unsigned char *nullsIndicator = (unsigned char*)data;
-    //char *exteriorRecordField = (char*)exteriorRecord + numberOfBytesForNullIndicator;
+	//exteriorRecord related
+	unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
+	unsigned char *nullsIndicator = (unsigned char*)data;
+	//char *exteriorRecordField = (char*)exteriorRecord + numberOfBytesForNullIndicator;
 
-    bool nullExist = false;
+	bool nullExist = false;
 
-    int exteriorRecordOffset = 0;
-    exteriorRecordOffset = exteriorRecordOffset + numberOfBytesForNullIndicator;
+	int exteriorRecordOffset = 0;
+	exteriorRecordOffset = exteriorRecordOffset + numberOfBytesForNullIndicator;
 
 
-    for (unsigned i = 0 ;i < numberOfFields ; i++)
-    {
-        unsigned positionOfByte = floor((double)i / 8);
-        unsigned positionOfNullIndicator = i % 8;
-        nullExist = nullsIndicator[positionOfByte] & (1 << (7 - positionOfNullIndicator));
+	for (unsigned i = 0 ;i < numberOfFields ; i++)
+	{
+		unsigned positionOfByte = floor((double)i / 8);
+		unsigned positionOfNullIndicator = i % 8;
+		nullExist = nullsIndicator[positionOfByte] & (1 << (7 - positionOfNullIndicator));
 
-        if(!nullExist)//Not Null Value
-        {
+		if(!nullExist)//Not Null Value
+		{
 
-            if(attrs[i].type == TypeVarChar)
-            {
-                char *stringLength = (char*)data + exteriorRecordOffset;
-                int stringLength_int = *((int*)stringLength);
-                exteriorRecordOffset = exteriorRecordOffset + sizeof(int); //length field
+			if(attrs[i].type == TypeVarChar)
+			{
+				char *stringLength = (char*)data + exteriorRecordOffset;
+				int stringLength_int = *((int*)stringLength);
+				exteriorRecordOffset = exteriorRecordOffset + sizeof(int); //length field
 
-                if(attrName.compare(attrs.at(i).name) == 0)
-                {
-                    value = string((char *)data + exteriorRecordOffset, stringLength_int);
-                    return 0;
-                }
+				if(attrName.compare(attrs.at(i).name) == 0)
+				{
+					value = string((char *)data + exteriorRecordOffset, stringLength_int);
+					return 0;
+				}
 
-                exteriorRecordOffset = exteriorRecordOffset + stringLength_int;// string
-            }
-            else if (attrs[i].type == TypeInt)
-            {
-                exteriorRecordOffset = exteriorRecordOffset + attrs[i].length;
-            }
-            else if (attrs[i].type ==TypeReal)
-            {
-                exteriorRecordOffset = exteriorRecordOffset + attrs[i].length;
-            }
-        }
-        else
-        {
-            //blablalbalbla
-            //return -1;
-        }
-    }
-    return -1;
+				exteriorRecordOffset = exteriorRecordOffset + stringLength_int;// string
+			}
+			else if (attrs[i].type == TypeInt)
+			{
+				exteriorRecordOffset = exteriorRecordOffset + attrs[i].length;
+			}
+			else if (attrs[i].type ==TypeReal)
+			{
+				exteriorRecordOffset = exteriorRecordOffset + attrs[i].length;
+			}
+		}
+		else
+		{
+			//blablalbalbla
+			//return -1;
+		}
+	}
+	return -1;
 }
+
+//RC Iterator::getAddressOfAttr(const void* data, vector<Attribute> &attrs, string &attrName, void *address)
+//{
+//	unsigned numberOfFields = attrs.size();
+//
+//	//exteriorRecord related
+//	unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
+//	unsigned char *nullsIndicator = (unsigned char*)data;
+//	//char *exteriorRecordField = (char*)exteriorRecord + numberOfBytesForNullIndicator;
+//
+//	bool nullExist = false;
+//
+//	int exteriorRecordOffset = 0;
+//	exteriorRecordOffset = exteriorRecordOffset + numberOfBytesForNullIndicator;
+//
+//
+//	for (unsigned i = 0 ;i < numberOfFields ; i++)
+//	{
+//		unsigned positionOfByte = floor((double)i / 8);
+//		unsigned positionOfNullIndicator = i % 8;
+//		nullExist = nullsIndicator[positionOfByte] & (1 << (7 - positionOfNullIndicator));
+//
+//		if(!nullExist)//Not Null Value
+//		{
+//
+//			if(attrs[i].type == TypeVarChar)
+//			{
+//				char *stringLength = (char*)data + exteriorRecordOffset;
+//				int stringLength_int = *((int*)stringLength);
+//
+//				if(attrName.compare(attrs.at(i).name) == 0)
+//				{
+//					address = (void *)(nullsIndicator + exteriorRecordOffset);
+//					return 0;
+//				}
+//				exteriorRecordOffset = exteriorRecordOffset + sizeof(int);
+//				exteriorRecordOffset = exteriorRecordOffset + stringLength_int;// string
+//			}
+//			else if (attrs[i].type == TypeInt)
+//			{
+//				if(attrName.compare(attrs.at(i).name) == 0)
+//				{
+//					address = (void*) (nullsIndicator + exteriorRecordOffset);
+//					return 0;
+//				}
+//				exteriorRecordOffset = exteriorRecordOffset + sizeof(int);
+//			}
+//			else if (attrs[i].type ==TypeReal)
+//			{
+//				if(attrName.compare(attrs.at(i).name) == 0)
+//				{
+//					address = (void*) (nullsIndicator + exteriorRecordOffset);
+//					return 0;
+//				}
+//				exteriorRecordOffset = exteriorRecordOffset + sizeof(int);
+//			}
+//		}
+//		else
+//		{
+//			//blablalbalbla
+//			//return -1;
+//		}
+//	}
+//	return -1;
+//}
 
 template <typename T>
 RC Iterator::getValueOfAttr(const void* data, vector<Attribute> &attrs, string &attrName, T &value)
 {
-    unsigned numberOfFields = attrs.size();
+	unsigned numberOfFields = attrs.size();
 
-    //exteriorRecord related
-    unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
-    unsigned char *nullsIndicator = (unsigned char*)data;
-    //char *exteriorRecordField = (char*)exteriorRecord + numberOfBytesForNullIndicator;
+	//exteriorRecord related
+	unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
+	unsigned char *nullsIndicator = (unsigned char*)data;
+	//char *exteriorRecordField = (char*)exteriorRecord + numberOfBytesForNullIndicator;
 
-    bool nullExist = false;
+	bool nullExist = false;
 
-    int exteriorRecordOffset = 0;
-    exteriorRecordOffset = exteriorRecordOffset + numberOfBytesForNullIndicator;
+	int exteriorRecordOffset = 0;
+	exteriorRecordOffset = exteriorRecordOffset + numberOfBytesForNullIndicator;
 
 
-    for (unsigned i = 0 ;i < numberOfFields ; i++)
-    {
-        unsigned positionOfByte = floor((double)i / 8);
-        unsigned positionOfNullIndicator = i % 8;
-        nullExist = nullsIndicator[positionOfByte] & (1 << (7 - positionOfNullIndicator));
+	for (unsigned i = 0 ;i < numberOfFields ; i++)
+	{
+		unsigned positionOfByte = floor((double)i / 8);
+		unsigned positionOfNullIndicator = i % 8;
+		nullExist = nullsIndicator[positionOfByte] & (1 << (7 - positionOfNullIndicator));
 
-        if(!nullExist)//Not Null Value
-        {
-            if(attrs[i].type == TypeVarChar)
-            {
-                char *stringLength = (char*)data + exteriorRecordOffset;
-                int stringLength_int = *((int*)stringLength);
-                exteriorRecordOffset = exteriorRecordOffset + sizeof(int); //length field
-                exteriorRecordOffset = exteriorRecordOffset + stringLength_int;// string
-            }
-            else if (attrs[i].type == TypeInt)
-            {
-                if(attrName.compare(attrs.at(i).name) == 0)
-                {
-                    value = *((int *) (nullsIndicator + exteriorRecordOffset));
-                    return 0;
-                }
-                exteriorRecordOffset = exteriorRecordOffset + sizeof(int);
-            }
-            else if (attrs[i].type ==TypeReal)
-            {
-                if(attrName.compare(attrs.at(i).name) == 0)
-                {
-                    value = *((float *) (nullsIndicator + exteriorRecordOffset));
-                    return 0;
-                }
-                exteriorRecordOffset = exteriorRecordOffset + sizeof(float);
-            }
-        }
-        else
-        {
-            //blablalbalbla
-            //return -1;
-        }
-    }
-    return -1;
+		if(!nullExist)//Not Null Value
+		{
+			if(attrs[i].type == TypeVarChar)
+			{
+				char *stringLength = (char*)data + exteriorRecordOffset;
+				int stringLength_int = *((int*)stringLength);
+				exteriorRecordOffset = exteriorRecordOffset + sizeof(int); //length field
+				exteriorRecordOffset = exteriorRecordOffset + stringLength_int;// string
+			}
+			else if (attrs[i].type == TypeInt)
+			{
+				if(attrName.compare(attrs.at(i).name) == 0)
+				{
+					value = *((int *) (nullsIndicator + exteriorRecordOffset));
+					return 0;
+				}
+				exteriorRecordOffset = exteriorRecordOffset + sizeof(int);
+			}
+			else if (attrs[i].type ==TypeReal)
+			{
+				if(attrName.compare(attrs.at(i).name) == 0)
+				{
+					value = *((float *) (nullsIndicator + exteriorRecordOffset));
+					return 0;
+				}
+				exteriorRecordOffset = exteriorRecordOffset + sizeof(float);
+			}
+		}
+		else
+		{
+			//blablalbalbla
+			//return -1;
+		}
+	}
+	return -1;
 }
 
 
@@ -465,27 +532,27 @@ RC Project ::getNextTuple(void *data) {
 
 
 
-//		for(unsigned i = 0 ; i < attrsFromIter.size() ; i++)
-//		{
-//
-//			string attributeName;
-//			split(attrsFromIter[i].name, tableName, attributeName);
-//
-//			//Projected Attribute construction
-//			if(attributeName.compare(*it) == 0)
-//			{
-//				//Projected Attr location info
-//				ExtractedAttr extractedAttr;
-//				extractedAttr.fieldNum = i;
-//				extractedAttr.type = attrsFromIter[i].type;
-//				extractedDataDescriptor.push_back(extractedAttr);
-//
-//				//Projected Attr
-//				Attribute attr;
-//				attr = attrsFromIter[i];
-//				attrs.push_back(attr);
-//			}
-//		}
+		//		for(unsigned i = 0 ; i < attrsFromIter.size() ; i++)
+		//		{
+		//
+		//			string attributeName;
+		//			split(attrsFromIter[i].name, tableName, attributeName);
+		//
+		//			//Projected Attribute construction
+		//			if(attributeName.compare(*it) == 0)
+		//			{
+		//				//Projected Attr location info
+		//				ExtractedAttr extractedAttr;
+		//				extractedAttr.fieldNum = i;
+		//				extractedAttr.type = attrsFromIter[i].type;
+		//				extractedDataDescriptor.push_back(extractedAttr);
+		//
+		//				//Projected Attr
+		//				Attribute attr;
+		//				attr = attrsFromIter[i];
+		//				attrs.push_back(attr);
+		//			}
+		//		}
 	}
 
 
@@ -510,26 +577,26 @@ RC Project::projectData(vector<ExtractedAttr> &extractedDataDescriptor, char *re
 
 
 
-//		for (unsigned j = 0 ; j < )
-//
-//		int fieldSize = rbfm->getRecordFieldSize(recordToRead,extractedDataDescriptor[i].fieldNum);
-//		if(fieldSize != -1)
-//		{
-//			if(extractedDataDescriptor[i].type == TypeVarChar)
-//			{
-//				int stringSize = fieldSize;
-//				char *currentRecordField = recordField + recordFieldOffset;
-//				*((int*)currentRecordField) = stringSize;
-//				recordFieldOffset = recordFieldOffset + sizeof(int);
-//			}
-//
-//			memcpy(recordField + recordFieldOffset, (char*)recordToRead + rbfm->getRecordFieldOffset(recordToRead,extractedDataDescriptor[i].fieldNum), fieldSize);
-//			recordFieldOffset = recordFieldOffset + fieldSize;
-//		}
-//		else//return value -1 means NULL
-//		{
-//			nullsIndicator[positionOfByte] = nullsIndicator[positionOfByte] | (1 << (7 - positionOfNullIndicator));
-//		}
+		//		for (unsigned j = 0 ; j < )
+		//
+		//		int fieldSize = rbfm->getRecordFieldSize(recordToRead,extractedDataDescriptor[i].fieldNum);
+		//		if(fieldSize != -1)
+		//		{
+		//			if(extractedDataDescriptor[i].type == TypeVarChar)
+		//			{
+		//				int stringSize = fieldSize;
+		//				char *currentRecordField = recordField + recordFieldOffset;
+		//				*((int*)currentRecordField) = stringSize;
+		//				recordFieldOffset = recordFieldOffset + sizeof(int);
+		//			}
+		//
+		//			memcpy(recordField + recordFieldOffset, (char*)recordToRead + rbfm->getRecordFieldOffset(recordToRead,extractedDataDescriptor[i].fieldNum), fieldSize);
+		//			recordFieldOffset = recordFieldOffset + fieldSize;
+		//		}
+		//		else//return value -1 means NULL
+		//		{
+		//			nullsIndicator[positionOfByte] = nullsIndicator[positionOfByte] | (1 << (7 - positionOfNullIndicator));
+		//		}
 
 	}
 
@@ -538,18 +605,18 @@ RC Project::projectData(vector<ExtractedAttr> &extractedDataDescriptor, char *re
 
 void Project ::getAttributes(vector<Attribute> &attrs) const
 {
-    attrs.clear();
-    attrs = this->attrs;
-    unsigned i;
+	attrs.clear();
+	attrs = this->attrs;
+	unsigned i;
 
-    // For attribute in vector<Attribute>, name it as rel.attr
-    for(i = 0; i < attrs.size(); ++i)
-    {
-        string tmp = tableName;
-        tmp += ".";
-        tmp += attrs.at(i).name;
-        attrs.at(i).name = tmp;
-    }
+	// For attribute in vector<Attribute>, name it as rel.attr
+	for(i = 0; i < attrs.size(); ++i)
+	{
+		string tmp = tableName;
+		tmp += ".";
+		tmp += attrs.at(i).name;
+		attrs.at(i).name = tmp;
+	}
 }
 
 

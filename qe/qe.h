@@ -270,7 +270,7 @@ class BNLJoin : public Iterator {
         unsigned totalBufferSize;
         //char *buffer;
         vector<void *> bufferV;
-        //std::unordered_map<string, vector<unsigned> > tuplesMap;
+        std::map<string, vector<unsigned> > tuplesMap;
 
 
 };
