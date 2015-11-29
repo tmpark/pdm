@@ -6,7 +6,7 @@
 #include "../rbf/rbfm.h"
 #include "../rm/rm.h"
 #include "../ix/ix.h"
-#include <unordered_map>
+#include <map>
 
 #define QE_EOF (-1)  // end of the index scan
 
@@ -228,12 +228,19 @@ class Project : public Iterator {
     // Projection operator
     public:
         Project(Iterator *input,                    // Iterator of input R
-              const vector<string> &attrNames){};   // vector containing attribute names
-        ~Project(){};
+              const vector<string> &attrNames);   // vector containing attribute names
+        ~Project();
 
-        RC getNextTuple(void *data) {return QE_EOF;};
+        RC getNextTuple(void *data);
         // For attribute in vector<Attribute>, name it as rel.attr
-        void getAttributes(vector<Attribute> &attrs) const{};
+        void getAttributes(vector<Attribute> &attrs)const;
+
+        Iterator *iter;
+        string tableName;
+        vector<ExtractedAttr> extractedDataDescriptor;
+        vector<Attribute> attrs;
+
+        RC projectData(vector<ExtractedAttr> &extractedDataDescriptor, char *recordToRead, void *data);
 };
 
 // Optional for the undergraduate solo teams: 5 extra-credit points
@@ -258,9 +265,14 @@ class BNLJoin : public Iterator {
         unsigned numPages;
         bool hasMore;
         unsigned totalBufferSize;
+<<<<<<< HEAD
         //char *buffer;
         vector<void *> bufferV;
         std::unordered_map<string, vector<unsigned> > tuplesMap;
+=======
+        char *buffer;
+        //std::unordered_map<string, vector<void *> > tuplesMap;
+>>>>>>> b42690a25d6ed75af9940861dec349743b6ccfbc
 
 };
 

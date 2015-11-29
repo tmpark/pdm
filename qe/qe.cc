@@ -60,6 +60,7 @@ RC Filter::getNextTuple(void *data)
 	return 0;
 }
 
+
 //BNLJoin::BNLJoin(Iterator *leftIn,            // Iterator of input R
 //		TableScan *rightIn,           // TableScan Iterator of input S
 //		const Condition &condition,   // Join condition
@@ -364,3 +365,111 @@ int Iterator::compareValues(T const valueExtracted, T const valueCompared, int c
 	return -1;
 }
 // ... the rest of your implementations go here
+
+
+
+Project :: Project(Iterator *input,const vector<string> &attrNames)
+{
+
+	iter = input;
+	vector <Attribute> attrsFromIter;
+	iter->getAttributes(attrsFromIter);
+	for(vector<string>::const_iterator it = attrNames.begin() ; it != attrNames.end() ; ++it)
+	{
+		for(unsigned i = 0 ; i < attrsFromIter.size() ; i++)
+		{
+
+			string attributeName;
+			split(attrsFromIter[i].name, tableName, attributeName);
+
+			//Projected Attribute construction
+			if(attributeName.compare(*it) == 0)
+			{
+				//Projected Attr location info
+				ExtractedAttr extractedAttr;
+				extractedAttr.fieldNum = i;
+				extractedAttr.type = attrsFromIter[i].type;
+				extractedDataDescriptor.push_back(extractedAttr);
+
+				//Projected Attr
+				Attribute attr;
+				attr = attrsFromIter[i];
+				attrs.push_back(attr);
+			}
+		}
+	}
+
+}
+
+Project :: ~Project()
+{
+
+}
+
+RC Project ::getNextTuple(void *data) {
+
+	char returnedData[PAGE_SIZE];
+	RC rc = iter->getNextTuple(returnedData);
+	if(rc == QE_EOF)
+		return QE_EOF;
+
+	rc = projectData(extractedDataDescriptor,returnedData,data);
+	return rc;
+}
+
+RC Project::projectData(vector<ExtractedAttr> &extractedDataDescriptor, char *recordToRead, void *data)
+{
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+	unsigned numberOfFields = extractedDataDescriptor.size();
+	unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
+	unsigned char *nullsIndicator = (unsigned char*)data;
+	memset(nullsIndicator, 0, numberOfBytesForNullIndicator);
+
+	char *recordField = (char*)data + numberOfBytesForNullIndicator;
+	int recordFieldOffset = 0;
+
+	for (unsigned i = 0 ;i < numberOfFields ; i++)
+	{
+		unsigned positionOfByte = floor((double)i / 8);
+		unsigned positionOfNullIndicator = i % 8;
+
+		int fieldSize = rbfm->getRecordFieldSize(recordToRead,extractedDataDescriptor[i].fieldNum);
+		if(fieldSize != -1)
+		{
+			if(extractedDataDescriptor[i].type == TypeVarChar)
+			{
+				int stringSize = fieldSize;
+				char *currentRecordField = recordField + recordFieldOffset;
+				*((int*)currentRecordField) = stringSize;
+				recordFieldOffset = recordFieldOffset + sizeof(int);
+			}
+
+			memcpy(recordField + recordFieldOffset, (char*)recordToRead + rbfm->getRecordFieldOffset(recordToRead,extractedDataDescriptor[i].fieldNum), fieldSize);
+			recordFieldOffset = recordFieldOffset + fieldSize;
+		}
+		else//return value -1 means NULL
+		{
+			nullsIndicator[positionOfByte] = nullsIndicator[positionOfByte] | (1 << (7 - positionOfNullIndicator));
+		}
+
+	}
+
+	return 0;
+}
+
+void Project ::getAttributes(vector<Attribute> &attrs) const
+{
+    attrs.clear();
+    attrs = this->attrs;
+    unsigned i;
+
+    // For attribute in vector<Attribute>, name it as rel.attr
+    for(i = 0; i < attrs.size(); ++i)
+    {
+        string tmp = tableName;
+        tmp += ".";
+        tmp += attrs.at(i).name;
+        attrs.at(i).name = tmp;
+    }
+}
+
