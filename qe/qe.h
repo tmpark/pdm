@@ -258,8 +258,9 @@ class BNLJoin : public Iterator {
         unsigned numPages;
         bool hasMore;
         unsigned totalBufferSize;
-        char *buffer;
-        std::unordered_map<string, vector<void *> > tuplesMap;
+        //char *buffer;
+        vector<void *> bufferV;
+        std::unordered_map<string, vector<unsigned> > tuplesMap;
 
 };
 
