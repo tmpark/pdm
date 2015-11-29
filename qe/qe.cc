@@ -462,3 +462,88 @@ void Project ::getAttributes(vector<Attribute> &attrs) const
     }
 }
 
+
+
+INLJoin :: INLJoin(Iterator *leftIn, IndexScan *rightIn, const Condition &condition)
+{
+	leftIter = leftIn;
+	rightIter = rightIn;
+	op = condition.op;
+	leftAttr = condition.lhsAttr;
+	rightAttr = condition.rhsAttr;
+
+	leftIter->getAttributes(lAttrs);
+	rightIter->getAttributes(rAttrs);
+
+	for(unsigned i = 0 ; i < lAttrs.size() ; i++)
+	{
+		if(lAttrs[i].name == leftAttr)
+		{
+			leftAttrType = lAttrs[i].type;
+			break;
+		}
+	}
+
+	for(unsigned i = 0 ; i < rAttrs.size() ; i++)
+	{
+		if(rAttrs[i].name == rightAttr)
+		{
+			rightAttrType = rAttrs[i].type;
+			break;
+		}
+	}
+
+}
+INLJoin :: ~INLJoin(){
+
+}
+
+
+
+bool INLJoin :: joinSatisfied(void *leftTuple,void *rightTuple)
+{
+
+	if(leftAttrType == TypeInt && rightAttrType == TypeInt)
+	{
+		int lValue;
+		getValueOfAttr(leftTuple,leftAttri,)
+	}
+	else if(leftAttrType == TypeReal && rightAttrType == TypeReal)
+	{
+
+	}
+	else if(leftAttrType == TypeVarChar && rightAttrType == TypeVarChar)
+	{
+
+	}
+
+	return false;
+}
+
+RC INLJoin :: getNextTuple(void *data){
+
+	char leftTuple[PAGE_SIZE];
+	char rightTuple[PAGE_SIZE];
+
+	while(leftIter->getNextTuple(leftTuple) != QE_EOF)
+	{
+		while(rightIter->getNextTuple(rightTuple) != QE_EOF)
+		{
+			//attribute extract;
+			if(joinSatisfied(leftTuple,rightTuple))
+			{
+				concaternate(data,leftTuple,rightTuple);
+				return 0;
+			}
+
+
+		}
+	}
+
+	return QE_EOF;
+}
+
+void INLJoin :: getAttributes(vector<Attribute> &attrs) const{
+
+}
+

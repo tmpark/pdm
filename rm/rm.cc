@@ -134,6 +134,8 @@ RC RelationManager::deleteCatalog()
 	rbfm->destroyFile(string(TABLES_TABLE_NAME));
 	rbfm->destroyFile(string(COLUMNS_TABLE_NAME));
 	admin = false;
+
+	nextTableID = 0;
 	return 0;
 }
 
