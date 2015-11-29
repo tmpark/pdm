@@ -147,7 +147,7 @@ public:
 
 
   //-----------------custom functions--------------------------------------------------------------------------
-  bool isNullField(const vector<Attribute> &recordDescriptor,const void *data, unsigned fieldNum);
+  bool isNullField(const void *data, unsigned fieldNum);
 
   RecordDic getRecordFieldOffset(const void *recordToProcess, unsigned fieldNum);
   RecordDic getRecordFieldSize(const void *recordToProcess, unsigned fieldNum);

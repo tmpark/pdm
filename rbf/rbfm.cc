@@ -55,7 +55,7 @@ RC RecordBasedFileManager::closeFile(FileHandle &fileHandle) {
 	return success;
 }
 
-bool RecordBasedFileManager::isNullField(const vector<Attribute> &recordDescriptor,const void *data, unsigned fieldNum)
+bool RecordBasedFileManager::isNullField(const void *data, unsigned fieldNum)
 {
 	unsigned positionOfByte = floor((double)fieldNum / 8);
 	unsigned positionOfNullIndicator = fieldNum % 8;

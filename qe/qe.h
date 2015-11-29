@@ -50,6 +50,8 @@ class Iterator {
     	RC getValueOfAttr(const void* data, vector<Attribute> &attrs, string &attrName, T &value);
     	RC getValueOfAttr(const void* data, vector<Attribute> &attrs, string &attrName, string &value);
     	unsigned getSizeOfTuple(const vector<Attribute> &attrs,const void *data);
+    	bool isNullField(const void *data, unsigned fieldNum);
+
 };
 
 
@@ -239,6 +241,7 @@ class Project : public Iterator {
         string tableName;
         vector<ExtractedAttr> extractedDataDescriptor;
         vector<Attribute> attrs;
+        vector<string> attrNamesToProject;
 
         RC projectData(vector<ExtractedAttr> &extractedDataDescriptor, char *recordToRead, void *data);
 };
@@ -267,7 +270,7 @@ class BNLJoin : public Iterator {
         unsigned totalBufferSize;
         //char *buffer;
         vector<void *> bufferV;
-        std::unordered_map<string, vector<unsigned> > tuplesMap;
+        //std::unordered_map<string, vector<unsigned> > tuplesMap;
 
 
 };
@@ -299,6 +302,7 @@ class INLJoin : public Iterator {
     	vector<Attribute> rAttrs;
 
     	bool joinSatisfied(void *leftTuple,void *rightTuple);
+    	RC concaternate(void *data,void *leftTuple, void *rightTuple);
 };
 
 // Optional for everyone. 10 extra-credit points

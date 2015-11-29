@@ -17,47 +17,80 @@ Filter::Filter(Iterator* input, const Condition &condition)
 
 RC Filter::getNextTuple(void *data)
 {
-	//	char tableName[WHOLE_SIZE_FOR_ENTRIES];
-	//	char attrName[WHOLE_SIZE_FOR_ENTRIES];
-	string tableName;
-	string attrName;
-	//	char tuple[WHOLE_SIZE_FOR_ENTRIES];
+    //    char tableName[WHOLE_SIZE_FOR_ENTRIES];
+    //    char attrName[WHOLE_SIZE_FOR_ENTRIES];
+    //string tableName;
+    //string attrName;
+    //    char tuple[WHOLE_SIZE_FOR_ENTRIES];
 
-	split(cond.lhsAttr,tableName, attrName);
-	//AttrType type = getType(attrs, attrName);
-	AttrType type = cond.rhsValue.type;
+    //split(cond.lhsAttr,tableName, attrName);
+    //AttrType type = getType(attrs, attrName);
+    AttrType type = cond.rhsValue.type;
 
-	while (it->getNextTuple(data) == 0)
-	{
-		/*if(type == TypeVarChar)
-		{
-			string value;
-			if(getValueOfAttr(data, attrs, s, value) != 0) return -1;
-			if(cond.bRhsIsAttr == true) cout <<  "ERROR: Righthandside is attr" << endl; return -1;
-			//FIXME: I think they assumed that they will not provide string in rhside
-			if(compareValues(value, cond.rhsValue.data, cond.op)) return 0;
-		}
-		else*/ if(type == TypeInt)
-		{
-			int value;
-			if(getValueOfAttr(data, attrs, attrName, value) != 0)
-			{
-				cout << "ERROR" << endl;
-				return -1;
-			}
-			if(cond.bRhsIsAttr == true) cout <<  "ERROR: Righthandside is attr" << endl; return -1;
-			if(compareValues(value, *(int *)cond.rhsValue.data, cond.op)) return 0;
-		}
-		else if(type == TypeReal)
-		{
-			float value;
-			if(getValueOfAttr(data, attrs, attrName, value) != 0) return -1;
-			if(cond.bRhsIsAttr == true) cout <<  "ERROR: Righthandside is attr" << endl; return -1;
-			if(compareValues(value, *(float *)cond.rhsValue.data, cond.op)) return 0;
-		}
+    while (it->getNextTuple(data) == 0)
+    {
+        if(type == TypeVarChar)
+        {
+            string value;
+            if(getValueOfAttr(data, attrs, cond.lhsAttr, value) != 0)
+            {
+                cout << "ERRORINT" << endl;
+                return -1;
+            }
+            if(cond.bRhsIsAttr == true)
+            {
+                cout <<  "ERROR: Righthandside is attr" << endl;
+                return -1;
+            }
+            //FIXME: I think they assumed that they will not provide string in rhside
+            int *length = (int *)(cond.rhsValue.data);
+            string s((char *)(length + 1), *length);
+            if(compareValues(value, s, cond.op) == true)
+            {
+                return 0;
+            }
+        }
+        else if(type == TypeInt)
+        {
+            int value;
+            if(getValueOfAttr(data, attrs, cond.lhsAttr, value) != 0)
+            {
+                cout << "ERRORINT" << endl;
+                return -1;
+            }
+            if(cond.bRhsIsAttr == true)
+            {
+                cout <<  "ERROR: Righthandside is attr" << endl;
+                return -1;
+            }
+            int a = *(int *)((cond.rhsValue).data);
+            int b = value;
+            if(compareValues(value, *(int *)((cond.rhsValue).data), cond.op) == true)
+            {
+                return 0;
+            }
+        }
+        else if(type == TypeReal)
+        {
+            float value;
+            if(getValueOfAttr(data, attrs, cond.lhsAttr, value) != 0)
+            {
+                cout << "ERRORREAL" << endl;
+                return -1;
+            }
+            if(cond.bRhsIsAttr == true)
+            {
+                cout <<  "ERROR: Righthandside is attr" << endl;
+                return -1;
+            }
+            if(compareValues(value, *(float *)cond.rhsValue.data, cond.op) == true)
+            {
+                return 0;
+            }
+        }
 
-	}
-	return 0;
+    }
+    return -1;
 }
 
 
@@ -146,6 +179,15 @@ RC Filter::getNextTuple(void *data)
 ///////////////HELPERS//////////////////////
 ////////////////////////////////////////////
 
+
+bool Iterator::isNullField(const void *data, unsigned fieldNum)
+{
+	unsigned positionOfByte = floor((double)fieldNum / 8);
+	unsigned positionOfNullIndicator = fieldNum % 8;
+	char *nullPtr = (char*)data;
+	return nullPtr[positionOfByte] & (1 << (7 - positionOfNullIndicator));
+}
+
 unsigned Iterator::getSizeOfTuple(const vector<Attribute> &recordDescriptor,const void *exteriorRecord)
 {
 	unsigned numberOfFields = recordDescriptor.size();
@@ -188,118 +230,119 @@ unsigned Iterator::getSizeOfTuple(const vector<Attribute> &recordDescriptor,cons
 
 RC Iterator::getValueOfAttr(const void* data, vector<Attribute> &attrs, string &attrName, string &value)
 {
-	unsigned numberOfFields = attrs.size();
+    unsigned numberOfFields = attrs.size();
 
-	//exteriorRecord related
-	unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
-	unsigned char *nullsIndicator = (unsigned char*)data;
-	//char *exteriorRecordField = (char*)exteriorRecord + numberOfBytesForNullIndicator;
+    //exteriorRecord related
+    unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
+    unsigned char *nullsIndicator = (unsigned char*)data;
+    //char *exteriorRecordField = (char*)exteriorRecord + numberOfBytesForNullIndicator;
 
-	bool nullExist = false;
+    bool nullExist = false;
 
-	int exteriorRecordOffset = 0;
-	exteriorRecordOffset = exteriorRecordOffset + numberOfBytesForNullIndicator;
+    int exteriorRecordOffset = 0;
+    exteriorRecordOffset = exteriorRecordOffset + numberOfBytesForNullIndicator;
 
 
-	for (unsigned i = 0 ;i < numberOfFields ; i++)
-	{
-		unsigned positionOfByte = floor((double)i / 8);
-		unsigned positionOfNullIndicator = i % 8;
-		nullExist = nullsIndicator[positionOfByte] & (1 << (7 - positionOfNullIndicator));
+    for (unsigned i = 0 ;i < numberOfFields ; i++)
+    {
+        unsigned positionOfByte = floor((double)i / 8);
+        unsigned positionOfNullIndicator = i % 8;
+        nullExist = nullsIndicator[positionOfByte] & (1 << (7 - positionOfNullIndicator));
 
-		if(!nullExist)//Not Null Value
-		{
+        if(!nullExist)//Not Null Value
+        {
 
-			if(attrs[i].type == TypeVarChar)
-			{
-				char *stringLength = (char*)data + exteriorRecordOffset;
-				int stringLength_int = *((int*)stringLength);
-				exteriorRecordOffset = exteriorRecordOffset + sizeof(int); //length field
+            if(attrs[i].type == TypeVarChar)
+            {
+                char *stringLength = (char*)data + exteriorRecordOffset;
+                int stringLength_int = *((int*)stringLength);
+                exteriorRecordOffset = exteriorRecordOffset + sizeof(int); //length field
 
-				if(attrName.compare(attrs.at(i).name) == 0)
-				{
-					value = string((char *)data + exteriorRecordOffset, stringLength_int);
-					return 0;
-				}
+                if(attrName.compare(attrs.at(i).name) == 0)
+                {
+                    value = string((char *)data + exteriorRecordOffset, stringLength_int);
+                    return 0;
+                }
 
-				exteriorRecordOffset = exteriorRecordOffset + stringLength_int;// string
-			}
-			else if (attrs[i].type == TypeInt)
-			{
-				exteriorRecordOffset = exteriorRecordOffset + attrs[i].length;
-			}
-			else if (attrs[i].type ==TypeReal)
-			{
-				exteriorRecordOffset = exteriorRecordOffset + attrs[i].length;
-			}
-		}
-		else
-		{
-			//blablalbalbla
-			//return -1;
-		}
-	}
-	return -1;
+                exteriorRecordOffset = exteriorRecordOffset + stringLength_int;// string
+            }
+            else if (attrs[i].type == TypeInt)
+            {
+                exteriorRecordOffset = exteriorRecordOffset + attrs[i].length;
+            }
+            else if (attrs[i].type ==TypeReal)
+            {
+                exteriorRecordOffset = exteriorRecordOffset + attrs[i].length;
+            }
+        }
+        else
+        {
+            //blablalbalbla
+            //return -1;
+        }
+    }
+    return -1;
 }
 
 template <typename T>
 RC Iterator::getValueOfAttr(const void* data, vector<Attribute> &attrs, string &attrName, T &value)
 {
-	unsigned numberOfFields = attrs.size();
+    unsigned numberOfFields = attrs.size();
 
-	//exteriorRecord related
-	unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
-	unsigned char *nullsIndicator = (unsigned char*)data;
-	//char *exteriorRecordField = (char*)exteriorRecord + numberOfBytesForNullIndicator;
+    //exteriorRecord related
+    unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
+    unsigned char *nullsIndicator = (unsigned char*)data;
+    //char *exteriorRecordField = (char*)exteriorRecord + numberOfBytesForNullIndicator;
 
-	bool nullExist = false;
+    bool nullExist = false;
 
-	int exteriorRecordOffset = 0;
-	exteriorRecordOffset = exteriorRecordOffset + numberOfBytesForNullIndicator;
+    int exteriorRecordOffset = 0;
+    exteriorRecordOffset = exteriorRecordOffset + numberOfBytesForNullIndicator;
 
 
-	for (unsigned i = 0 ;i < numberOfFields ; i++)
-	{
-		unsigned positionOfByte = floor((double)i / 8);
-		unsigned positionOfNullIndicator = i % 8;
-		nullExist = nullsIndicator[positionOfByte] & (1 << (7 - positionOfNullIndicator));
+    for (unsigned i = 0 ;i < numberOfFields ; i++)
+    {
+        unsigned positionOfByte = floor((double)i / 8);
+        unsigned positionOfNullIndicator = i % 8;
+        nullExist = nullsIndicator[positionOfByte] & (1 << (7 - positionOfNullIndicator));
 
-		if(!nullExist)//Not Null Value
-		{
-			if(attrs[i].type == TypeVarChar)
-			{
-				char *stringLength = (char*)data + exteriorRecordOffset;
-				int stringLength_int = *((int*)stringLength);
-				exteriorRecordOffset = exteriorRecordOffset + sizeof(int); //length field
-				exteriorRecordOffset = exteriorRecordOffset + stringLength_int;// string
-			}
-			else if (attrs[i].type == TypeInt)
-			{
-				if(attrName.compare(attrs.at(i).name) == 0)
-				{
-					value = *((T*) data);
-					return 0;
-				}
-				exteriorRecordOffset = exteriorRecordOffset + attrs[i].length;
-			}
-			else if (attrs[i].type ==TypeReal)
-			{
-				if(attrName.compare(attrs.at(i).name) == 0)
-				{
-					value = *((T*) data);
-					return 0;
-				}
-				exteriorRecordOffset = exteriorRecordOffset + attrs[i].length;
-			}
-		}
-		else
-		{
-			//blablalbalbla
-			//return -1;
-		}
-	}
-	return -1;
+        if(!nullExist)//Not Null Value
+        {
+            if(attrs[i].type == TypeVarChar)
+            {
+                char *stringLength = (char*)data + exteriorRecordOffset;
+                int stringLength_int = *((int*)stringLength);
+                exteriorRecordOffset = exteriorRecordOffset + sizeof(int); //length field
+                exteriorRecordOffset = exteriorRecordOffset + stringLength_int;// string
+            }
+            else if (attrs[i].type == TypeInt)
+            {
+                if(attrName.compare(attrs.at(i).name) == 0)
+                {
+                    value = *((int *) (nullsIndicator + exteriorRecordOffset));
+                    return 0;
+                }
+                exteriorRecordOffset = exteriorRecordOffset + sizeof(int);
+            }
+            else if (attrs[i].type ==TypeReal)
+            {
+                if(attrName.compare(attrs.at(i).name) == 0)
+                {
+                    value = *((float *) (nullsIndicator + exteriorRecordOffset));
+                    return 0;
+                }
+                exteriorRecordOffset = exteriorRecordOffset + sizeof(float);
+            }
+        }
+        else
+        {
+            //blablalbalbla
+            //return -1;
+        }
+    }
+    return -1;
 }
+
 
 AttrType Iterator::getType(vector<Attribute> &attrs, string &attrName)
 {
@@ -374,7 +417,9 @@ Project :: Project(Iterator *input,const vector<string> &attrNames)
 	iter = input;
 	vector <Attribute> attrsFromIter;
 	iter->getAttributes(attrsFromIter);
-	for(vector<string>::const_iterator it = attrNames.begin() ; it != attrNames.end() ; ++it)
+	attrNamesToProject = attrNames;
+
+	for(vector<string>::const_iterator it = attrNamesToProject.begin() ; it != attrNamesToProject.end() ; ++it)
 	{
 		for(unsigned i = 0 ; i < attrsFromIter.size() ; i++)
 		{
@@ -413,13 +458,43 @@ RC Project ::getNextTuple(void *data) {
 	if(rc == QE_EOF)
 		return QE_EOF;
 
-	rc = projectData(extractedDataDescriptor,returnedData,data);
+
+	for(vector<string>::const_iterator it = attrNamesToProject.begin() ; it != attrNamesToProject.end() ; ++it)
+	{
+		//string
+
+
+
+//		for(unsigned i = 0 ; i < attrsFromIter.size() ; i++)
+//		{
+//
+//			string attributeName;
+//			split(attrsFromIter[i].name, tableName, attributeName);
+//
+//			//Projected Attribute construction
+//			if(attributeName.compare(*it) == 0)
+//			{
+//				//Projected Attr location info
+//				ExtractedAttr extractedAttr;
+//				extractedAttr.fieldNum = i;
+//				extractedAttr.type = attrsFromIter[i].type;
+//				extractedDataDescriptor.push_back(extractedAttr);
+//
+//				//Projected Attr
+//				Attribute attr;
+//				attr = attrsFromIter[i];
+//				attrs.push_back(attr);
+//			}
+//		}
+	}
+
+
+	//rc = projectData(extractedDataDescriptor,returnedData,data);
 	return rc;
 }
 
 RC Project::projectData(vector<ExtractedAttr> &extractedDataDescriptor, char *recordToRead, void *data)
 {
-	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 	unsigned numberOfFields = extractedDataDescriptor.size();
 	unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
 	unsigned char *nullsIndicator = (unsigned char*)data;
@@ -433,24 +508,28 @@ RC Project::projectData(vector<ExtractedAttr> &extractedDataDescriptor, char *re
 		unsigned positionOfByte = floor((double)i / 8);
 		unsigned positionOfNullIndicator = i % 8;
 
-		int fieldSize = rbfm->getRecordFieldSize(recordToRead,extractedDataDescriptor[i].fieldNum);
-		if(fieldSize != -1)
-		{
-			if(extractedDataDescriptor[i].type == TypeVarChar)
-			{
-				int stringSize = fieldSize;
-				char *currentRecordField = recordField + recordFieldOffset;
-				*((int*)currentRecordField) = stringSize;
-				recordFieldOffset = recordFieldOffset + sizeof(int);
-			}
 
-			memcpy(recordField + recordFieldOffset, (char*)recordToRead + rbfm->getRecordFieldOffset(recordToRead,extractedDataDescriptor[i].fieldNum), fieldSize);
-			recordFieldOffset = recordFieldOffset + fieldSize;
-		}
-		else//return value -1 means NULL
-		{
-			nullsIndicator[positionOfByte] = nullsIndicator[positionOfByte] | (1 << (7 - positionOfNullIndicator));
-		}
+
+//		for (unsigned j = 0 ; j < )
+//
+//		int fieldSize = rbfm->getRecordFieldSize(recordToRead,extractedDataDescriptor[i].fieldNum);
+//		if(fieldSize != -1)
+//		{
+//			if(extractedDataDescriptor[i].type == TypeVarChar)
+//			{
+//				int stringSize = fieldSize;
+//				char *currentRecordField = recordField + recordFieldOffset;
+//				*((int*)currentRecordField) = stringSize;
+//				recordFieldOffset = recordFieldOffset + sizeof(int);
+//			}
+//
+//			memcpy(recordField + recordFieldOffset, (char*)recordToRead + rbfm->getRecordFieldOffset(recordToRead,extractedDataDescriptor[i].fieldNum), fieldSize);
+//			recordFieldOffset = recordFieldOffset + fieldSize;
+//		}
+//		else//return value -1 means NULL
+//		{
+//			nullsIndicator[positionOfByte] = nullsIndicator[positionOfByte] | (1 << (7 - positionOfNullIndicator));
+//		}
 
 	}
 
@@ -472,6 +551,7 @@ void Project ::getAttributes(vector<Attribute> &attrs) const
         attrs.at(i).name = tmp;
     }
 }
+
 
 
 
@@ -516,19 +596,37 @@ bool INLJoin :: joinSatisfied(void *leftTuple,void *rightTuple)
 
 	if(leftAttrType == TypeInt && rightAttrType == TypeInt)
 	{
-		int lValue;
-		getValueOfAttr(leftTuple,leftAttri,)
+		int lValue = -1;
+		int rValue = -1;
+		getValueOfAttr(leftTuple,lAttrs,leftAttr,lValue);
+		getValueOfAttr(rightTuple,rAttrs,rightAttr,rValue);
+		return compareValues(lValue,rValue,op);
 	}
 	else if(leftAttrType == TypeReal && rightAttrType == TypeReal)
 	{
-
+		float lValue = -1;
+		float rValue = -1;
+		getValueOfAttr(leftTuple,lAttrs,leftAttr,lValue);
+		getValueOfAttr(rightTuple,rAttrs,rightAttr,rValue);
+		return compareValues(lValue,rValue,op);
 	}
 	else if(leftAttrType == TypeVarChar && rightAttrType == TypeVarChar)
 	{
-
+		string lValue;
+		string rValue;
+		getValueOfAttr(leftTuple,lAttrs,leftAttr,lValue);
+		getValueOfAttr(rightTuple,rAttrs,rightAttr,rValue);
+		return compareValues(lValue,rValue,op);
 	}
 
 	return false;
+}
+
+RC INLJoin :: concaternate(void *data,void *leftTuple,void *rightTuple)
+{
+
+
+
 }
 
 RC INLJoin :: getNextTuple(void *data){
@@ -543,7 +641,7 @@ RC INLJoin :: getNextTuple(void *data){
 			//attribute extract;
 			if(joinSatisfied(leftTuple,rightTuple))
 			{
-				concaternate(data,leftTuple,rightTuple);
+				RC rc = concaternate(data,leftTuple,rightTuple);
 				return 0;
 			}
 

@@ -564,7 +564,7 @@ RC RelationManager::insertTuple(const string &tableName, const void *data, RID &
 		//Index update
 		for(unsigned i = 0 ; i < attrVector.size() ; i++)
 		{
-			if(rbfm->isNullField(attrVector,data,i))
+			if(rbfm->isNullField(data,i))
 			{
 				continue;
 			}
