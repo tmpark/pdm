@@ -283,6 +283,7 @@ class BNLJoin : public Iterator {
         vector<Attribute> rightAttrs;
         //char *buffer;
         vector<void *> bufferV;
+        vector<TupleInfo> otherTuples;
         std::map<string, vector<TupleInfo> > tuplesMap;
 
 

@@ -129,12 +129,23 @@ BNLJoin::~BNLJoin()
 	{
 		delete[] bufferV[i];
 	}
+	for(unsigned i = 0; i < otherTuples.size(); i++)
+	{
+		delete[] otherTuples[i].tuple;
+	}
 }
 
 RC BNLJoin::getNextTuple(void *data)
 {
-	char *rightTuple[WHOLE_SIZE_FOR_ENTRIES];
 
+	if(otherTuples.size() > 0)
+	{
+		memcpy(data, otherTuples.front().tuple, otherTuples.front().size);
+		otherTuples.erase(otherTuples.begin());
+		return 0;
+	}
+
+	char *rightTuple[WHOLE_SIZE_FOR_ENTRIES];
 	while(rightIt->getNextTuple(rightTuple) == 0)
 	{
 		unsigned rTupleSize = getSizeOfTuple(rightAttrs, rightTuple);
@@ -177,9 +188,14 @@ RC BNLJoin::getNextTuple(void *data)
 			for(unsigned i = 1; i < got->second.size(); i++)
 			{
 				TupleInfo tupleInfo = got->second.at(i);
-				join(data, tupleInfo, rightTuple, rTupleSize);
-				return 0;
+				char *otherTuple = new char[tupleInfo.size + rTupleSize];
+				join(otherTuple, tupleInfo, rightTuple, rTupleSize);
+				TupleInfo otherTupleInfo;
+				otherTupleInfo.tuple = otherTuple;
+				otherTupleInfo.size = tupleInfo.size + rTupleSize;
+				otherTuples.push_back(otherTupleInfo);
 			}
+			return 0;
 		}
 		else
 		{
@@ -193,6 +209,7 @@ RC BNLJoin::getNextTuple(void *data)
 	if(hasMore)
 	{
 		readLeftBlock();
+		rightIt->setIterator();
 		return getNextTuple(data);
 	}
 	return QE_EOF;
