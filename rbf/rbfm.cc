@@ -1287,8 +1287,8 @@ RC RecordBasedFileManager::scan(FileHandle &fileHandle,
 	rbfm_ScanIterator.compOp = compOp;
 	rbfm_ScanIterator.conditionAttrFieldNum = -1;
 	rbfm_ScanIterator.conditionAttrFieldType = -1;
-	rbfm_ScanIterator.tempPage = tempPage;//(char*)malloc(PAGE_SIZE);
-	rbfm_ScanIterator.tempPage1 = tempPage1;//(char*)malloc(PAGE_SIZE);
+	rbfm_ScanIterator.tempPage = (char*)malloc(PAGE_SIZE);
+	rbfm_ScanIterator.tempPage1 = (char*)malloc(PAGE_SIZE);
 
 	for(unsigned i = 0 ; i < recordDescriptor.size() ; i++)
 	{
@@ -1596,8 +1596,8 @@ RC RBFM_ScanIterator::close()
 {
 	RC rc = 0;
 
-	//free(tempPage);
-	//free(tempPage1);
+	free(tempPage);
+	free(tempPage1);
 
 	return rc;
 }
