@@ -268,11 +268,13 @@ class BNLJoin : public Iterator {
 
         RC getNextTuple(void *data);
         // For attribute in vector<Attribute>, name it as rel.attr
-        void getAttributes(vector<Attribute> &attrs) const{};
+        void getAttributes(vector<Attribute> &attrs) const;
 
         void readLeftBlock();
         void join(void *data, TupleInfo &tupleInfo,
         		void *rightTuple, unsigned rTupleSize);
+        RC concatenate(void *data,const void *leftTuple,const void *rightTuple);
+        void free();
 
         Iterator *leftIt;
         TableScan *rightIt;
@@ -283,6 +285,7 @@ class BNLJoin : public Iterator {
         AttrType keyType;
         vector<Attribute> leftAttrs;
         vector<Attribute> rightAttrs;
+        vector<Attribute> attrs;
         //char *buffer;
         vector<void *> bufferV;
         vector<TupleInfo> otherTuples;
