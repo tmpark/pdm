@@ -331,6 +331,25 @@ bool Iterator::isNullField(const void *data, unsigned fieldNum)
 	return nullPtr[positionOfByte] & (1 << (7 - positionOfNullIndicator));
 }
 
+RC Iterator::setNull(void *data, unsigned fieldNum)
+{
+	unsigned positionOfByte = floor((double)fieldNum / 8);
+	unsigned positionOfNullIndicator = fieldNum % 8;
+	char *nullIndicator = (char*) data;
+	nullIndicator[positionOfByte] = nullIndicator[positionOfByte] | (1 << (7 - positionOfNullIndicator));
+	return 0;
+}
+
+int Iterator::initializeNullIndicator(const vector<Attribute> &recordDescriptor,void *data)
+{
+	unsigned numberOfFields = recordDescriptor.size();
+	unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
+	unsigned char *nullsIndicator = (unsigned char*)data;
+	memset(nullsIndicator, 0, numberOfBytesForNullIndicator);
+	return numberOfBytesForNullIndicator;
+}
+
+
 unsigned Iterator::getSizeOfTuple(const vector<Attribute> &recordDescriptor,const void *exteriorRecord)
 {
 	unsigned numberOfFields = recordDescriptor.size();
@@ -552,6 +571,81 @@ RC Iterator::getValueOfAttr(const void* data, vector<Attribute> &attrs, string &
 }
 
 
+
+RC Iterator::getOffsetNSizeOfAttr(const void* data, vector<Attribute> &attrs, string &attrName, int &offset, int &size)
+{
+    unsigned numberOfFields = attrs.size();
+
+    //exteriorRecord related
+    unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
+    unsigned char *nullsIndicator = (unsigned char*)data;
+    //char *exteriorRecordField = (char*)exteriorRecord + numberOfBytesForNullIndicator;
+
+    bool nullExist = false;
+
+    int exteriorRecordOffset = 0;
+    exteriorRecordOffset = exteriorRecordOffset + numberOfBytesForNullIndicator;
+
+
+    for (unsigned i = 0 ;i < numberOfFields ; i++)
+    {
+        unsigned positionOfByte = floor((double)i / 8);
+        unsigned positionOfNullIndicator = i % 8;
+        nullExist = nullsIndicator[positionOfByte] & (1 << (7 - positionOfNullIndicator));
+
+        //target attr
+		if(attrName.compare(attrs.at(i).name) == 0)
+		{
+			if(nullExist)
+			{
+				offset = -1;
+				size = -1;
+				return 0;
+			}
+
+			if(attrs[i].type == TypeInt)
+			{
+                offset = exteriorRecordOffset;
+                size = sizeof(int);
+                return 0;
+			}
+			else if(attrs[i].type ==TypeReal)
+			{
+				offset = exteriorRecordOffset;
+				size = sizeof(float);
+                return 0;
+			}
+			else if(attrs[i].type ==TypeReal)
+			{
+				char *stringLength = (char*)data + exteriorRecordOffset;
+				int stringLength_int = *((int*)stringLength);
+				offset = exteriorRecordOffset;
+				size = sizeof(int) + stringLength_int;
+                return 0;
+			}
+		}
+		else
+		{
+			if(nullExist)
+				continue;
+
+			if(attrs[i].type == TypeInt)
+				exteriorRecordOffset = exteriorRecordOffset + sizeof(int);
+			else if(attrs[i].type ==TypeReal)
+				exteriorRecordOffset = exteriorRecordOffset + sizeof(float);
+			else if(attrs[i].type ==TypeVarChar)
+			{
+				char *stringLength = (char*)data + exteriorRecordOffset;
+				int stringLength_int = *((int*)stringLength);
+				exteriorRecordOffset = exteriorRecordOffset + sizeof(int); //length field
+				exteriorRecordOffset = exteriorRecordOffset + stringLength_int;// string
+			}
+		}
+
+    }
+    return -1;
+}
+
 AttrType Iterator::getType(vector<Attribute> &attrs, string &attrName)
 {
 	unsigned numberOfFields = attrs.size();
@@ -582,7 +676,7 @@ RC Iterator::split(const string &toBeSplitted, string &firstToken, string &secon
 }
 
 template <typename T>
-int Iterator::compareValues(T const valueExtracted, T const valueCompared, int compOp)
+bool Iterator::compareValues(T const valueExtracted, T const valueCompared, int compOp)
 {
 	switch(compOp)
 	{
@@ -615,35 +709,45 @@ int Iterator::compareValues(T const valueExtracted, T const valueCompared, int c
 	}
 	return -1;
 }
+
+
+unsigned Iterator:: getSizeOfField(void *field, AttrType type)
+{
+	if(type == TypeInt)
+	{
+        return sizeof(int);
+	}
+	else if(type ==TypeReal)
+	{
+        return sizeof(float);
+	}
+	else if(type ==TypeReal)
+	{
+		char *stringLength = (char*)field;
+		int stringLength_int = *((int*)stringLength);
+        return sizeof(int) + stringLength_int;
+	}
+
+	return 0;
+}
+
 // ... the rest of your implementations go here
 
 
 
 Project :: Project(Iterator *input,const vector<string> &attrNames)
 {
-
 	iter = input;
-	vector <Attribute> attrsFromIter;
 	iter->getAttributes(attrsFromIter);
-	attrNamesToProject = attrNames;
 
-	for(vector<string>::const_iterator it = attrNamesToProject.begin() ; it != attrNamesToProject.end() ; ++it)
+	for(vector<string>::const_iterator it = attrNames.begin() ; it != attrNames.end() ; ++it)
 	{
 		for(unsigned i = 0 ; i < attrsFromIter.size() ; i++)
 		{
 
-			string attributeName;
-			split(attrsFromIter[i].name, tableName, attributeName);
-
 			//Projected Attribute construction
-			if(attributeName.compare(*it) == 0)
+			if(attrsFromIter[i].name.compare(*it) == 0)
 			{
-				//Projected Attr location info
-				ExtractedAttr extractedAttr;
-				extractedAttr.fieldNum = i;
-				extractedAttr.type = attrsFromIter[i].type;
-				extractedDataDescriptor.push_back(extractedAttr);
-
 				//Projected Attr
 				Attribute attr;
 				attr = attrsFromIter[i];
@@ -666,98 +770,33 @@ RC Project ::getNextTuple(void *data) {
 	if(rc == QE_EOF)
 		return QE_EOF;
 
+	char *nullIndicator = (char*)data;
+	char *dataFieldPtr = (char*)data + initializeNullIndicator(attrs,nullIndicator);
 
-	for(vector<string>::const_iterator it = attrNamesToProject.begin() ; it != attrNamesToProject.end() ; ++it)
+	unsigned currentOffset = 0;
+	for(unsigned i = 0 ; i <  attrs.size(); i++)
 	{
-		//string
+		int offset = -1;
+		int size = -1;
+		rc = getOffsetNSizeOfAttr(returnedData,attrsFromIter,attrs[i].name,offset,size);
 
+		if(offset == -1)
+			rc = setNull(nullIndicator,i);
+		else
+		{
+			memcpy(dataFieldPtr + currentOffset, returnedData + offset, size);
+			currentOffset = currentOffset + size;
+		}
 
-
-		//		for(unsigned i = 0 ; i < attrsFromIter.size() ; i++)
-		//		{
-		//
-		//			string attributeName;
-		//			split(attrsFromIter[i].name, tableName, attributeName);
-		//
-		//			//Projected Attribute construction
-		//			if(attributeName.compare(*it) == 0)
-		//			{
-		//				//Projected Attr location info
-		//				ExtractedAttr extractedAttr;
-		//				extractedAttr.fieldNum = i;
-		//				extractedAttr.type = attrsFromIter[i].type;
-		//				extractedDataDescriptor.push_back(extractedAttr);
-		//
-		//				//Projected Attr
-		//				Attribute attr;
-		//				attr = attrsFromIter[i];
-		//				attrs.push_back(attr);
-		//			}
-		//		}
 	}
 
-
-	//rc = projectData(extractedDataDescriptor,returnedData,data);
 	return rc;
-}
-
-RC Project::projectData(vector<ExtractedAttr> &extractedDataDescriptor, char *recordToRead, void *data)
-{
-	unsigned numberOfFields = extractedDataDescriptor.size();
-	unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
-	unsigned char *nullsIndicator = (unsigned char*)data;
-	memset(nullsIndicator, 0, numberOfBytesForNullIndicator);
-
-	char *recordField = (char*)data + numberOfBytesForNullIndicator;
-	int recordFieldOffset = 0;
-
-	for (unsigned i = 0 ;i < numberOfFields ; i++)
-	{
-		unsigned positionOfByte = floor((double)i / 8);
-		unsigned positionOfNullIndicator = i % 8;
-
-
-
-		//		for (unsigned j = 0 ; j < )
-		//
-		//		int fieldSize = rbfm->getRecordFieldSize(recordToRead,extractedDataDescriptor[i].fieldNum);
-		//		if(fieldSize != -1)
-		//		{
-		//			if(extractedDataDescriptor[i].type == TypeVarChar)
-		//			{
-		//				int stringSize = fieldSize;
-		//				char *currentRecordField = recordField + recordFieldOffset;
-		//				*((int*)currentRecordField) = stringSize;
-		//				recordFieldOffset = recordFieldOffset + sizeof(int);
-		//			}
-		//
-		//			memcpy(recordField + recordFieldOffset, (char*)recordToRead + rbfm->getRecordFieldOffset(recordToRead,extractedDataDescriptor[i].fieldNum), fieldSize);
-		//			recordFieldOffset = recordFieldOffset + fieldSize;
-		//		}
-		//		else//return value -1 means NULL
-		//		{
-		//			nullsIndicator[positionOfByte] = nullsIndicator[positionOfByte] | (1 << (7 - positionOfNullIndicator));
-		//		}
-
-	}
-
-	return 0;
 }
 
 void Project ::getAttributes(vector<Attribute> &attrs) const
 {
-	attrs.clear();
-	attrs = this->attrs;
-	unsigned i;
-
-	// For attribute in vector<Attribute>, name it as rel.attr
-	for(i = 0; i < attrs.size(); ++i)
-	{
-		string tmp = tableName;
-		tmp += ".";
-		tmp += attrs.at(i).name;
-		attrs.at(i).name = tmp;
-	}
+    attrs.clear();
+    attrs = this->attrs;
 }
 
 
@@ -773,6 +812,14 @@ INLJoin :: INLJoin(Iterator *leftIn, IndexScan *rightIn, const Condition &condit
 
 	leftIter->getAttributes(lAttrs);
 	rightIter->getAttributes(rAttrs);
+
+    //result attribute construction
+	attrs = lAttrs;
+    for(unsigned i = 0 ; i < rAttrs.size() ; i++)
+    {
+    	attrs.push_back(rAttrs[i]);
+    }
+
 
 	for(unsigned i = 0 ; i < lAttrs.size() ; i++)
 	{
@@ -796,7 +843,6 @@ INLJoin :: INLJoin(Iterator *leftIn, IndexScan *rightIn, const Condition &condit
 INLJoin :: ~INLJoin(){
 
 }
-
 
 
 bool INLJoin :: joinSatisfied(void *leftTuple,void *rightTuple)
@@ -830,11 +876,54 @@ bool INLJoin :: joinSatisfied(void *leftTuple,void *rightTuple)
 	return false;
 }
 
-RC INLJoin :: concaternate(void *data,void *leftTuple,void *rightTuple)
+RC INLJoin :: concaternate(void *data,const void *leftTuple,const void *rightTuple)
 {
+	//Null indicator initialization for concaternate tuple
+	char *nullIndicator = (char*)data;
+	char *dataFieldPtr = (char*)data + initializeNullIndicator(attrs,nullIndicator);
 
+    //Left tuple field preparation
+	unsigned numberOfFields = lAttrs.size();
+	unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
+	char *lNullIndicator = (char*)leftTuple;
+    char *lDataFieldPtr = (char*)leftTuple + numberOfBytesForNullIndicator;
 
+    //Right tuple field preparation
+	numberOfFields = rAttrs.size();
+	numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
+	char *rNullIndicator = (char*)rightTuple;
+    char *rDataFieldPtr = (char*)rightTuple + numberOfBytesForNullIndicator;
 
+	//first filled with left
+	for(unsigned i = 0 ; i < lAttrs.size() ; i++)
+	{
+		if(isNullField(lNullIndicator,i))
+			setNull(nullIndicator,i);
+		else
+		{
+			int lSize = getSizeOfField(lDataFieldPtr,lAttrs[i].type);
+			memcpy(dataFieldPtr, lDataFieldPtr, lSize);
+			dataFieldPtr = dataFieldPtr + lSize;
+			lDataFieldPtr = lDataFieldPtr + lSize;
+		}
+
+	}
+
+	//Next filled with right
+	for(unsigned i = 0 ; i < rAttrs.size() ; i++)
+	{
+		if(isNullField(rNullIndicator,i))
+			setNull(nullIndicator,i+lAttrs.size()); //Nullindicator is extended from left
+		else
+		{
+			int rSize = getSizeOfField(rDataFieldPtr,rAttrs[i].type);
+			memcpy(dataFieldPtr, rDataFieldPtr, rSize);
+			dataFieldPtr = dataFieldPtr + rSize;
+			rDataFieldPtr = rDataFieldPtr + rSize;
+		}
+
+	}
+	return 0;
 }
 
 RC INLJoin :: getNextTuple(void *data){
@@ -850,10 +939,8 @@ RC INLJoin :: getNextTuple(void *data){
 			if(joinSatisfied(leftTuple,rightTuple))
 			{
 				RC rc = concaternate(data,leftTuple,rightTuple);
-				return 0;
+				return rc;
 			}
-
-
 		}
 	}
 
@@ -861,6 +948,7 @@ RC INLJoin :: getNextTuple(void *data){
 }
 
 void INLJoin :: getAttributes(vector<Attribute> &attrs) const{
-
+    attrs.clear();
+    attrs = this->attrs;
 }
 
