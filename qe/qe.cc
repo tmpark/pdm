@@ -647,12 +647,14 @@ RC Iterator::getValueOfAttr(const void* data, vector<Attribute> &attrs, string &
 
 			if(attrs[i].type == TypeInt)
 			{
-				value = *((int *) (nullsIndicator + exteriorRecordOffset));
+				char *valuePtr = (char*)data + exteriorRecordOffset;
+				value = *((int *)valuePtr);
 				return 0;
 			}
 			else if(attrs[i].type ==TypeReal)
 			{
-				value = *((float *) (nullsIndicator + exteriorRecordOffset));
+				char *valuePtr = (char*)data + exteriorRecordOffset;
+				value = *((float *)valuePtr);
 				return 0;
 			}
 		}
@@ -922,6 +924,7 @@ INLJoin :: INLJoin(Iterator *leftIn, IndexScan *rightIn, const Condition &condit
 	rightIter->getAttributes(rAttrs);
 
 	//result attribute construction
+
 	attrs = lAttrs;
 	for(unsigned i = 0 ; i < rAttrs.size() ; i++)
 	{
@@ -946,6 +949,9 @@ INLJoin :: INLJoin(Iterator *leftIn, IndexScan *rightIn, const Condition &condit
 			break;
 		}
 	}
+
+
+	lEOF = leftIter->getNextTuple(leftTuple);
 
 }
 INLJoin :: ~INLJoin(){
@@ -1036,12 +1042,14 @@ RC INLJoin :: concaternate(void *data,const void *leftTuple,const void *rightTup
 
 RC INLJoin :: getNextTuple(void *data){
 
-	char leftTuple[PAGE_SIZE];
+	if(lEOF == QE_EOF)
+		return QE_EOF;
+
 	char rightTuple[PAGE_SIZE];
 
-	while(leftIter->getNextTuple(leftTuple) != QE_EOF)
+	while(!lEOF)
 	{
-		while(rightIter->getNextTuple(rightTuple) != QE_EOF)
+		while(rightIter->getNextTuple(rightTuple)!= QE_EOF)
 		{
 			//attribute extract;
 			if(joinSatisfied(leftTuple,rightTuple))
@@ -1050,9 +1058,14 @@ RC INLJoin :: getNextTuple(void *data){
 				return rc;
 			}
 		}
+
+		lEOF = leftIter->getNextTuple(leftTuple);
+
+		rightIter->setIterator(NULL,NULL,true,true);
 	}
 
 	return QE_EOF;
+
 }
 
 void INLJoin :: getAttributes(vector<Attribute> &attrs) const{
