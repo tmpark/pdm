@@ -45,12 +45,17 @@ class Iterator {
         RC split(const string &toBeSplitted, string &firstToken, string &secondToken);
         AttrType getType(vector<Attribute> &attrs, string &attrName);
         template <typename T>
-        int compareValues(T const valueExtracted, T const valueCompared, int compOp);
+        bool compareValues(T const valueExtracted, T const valueCompared, int compOp);
     	template <typename T>
     	RC getValueOfAttr(const void* data, vector<Attribute> &attrs, string &attrName, T &value);
     	RC getValueOfAttr(const void* data, vector<Attribute> &attrs, string &attrName, string &value);
     	unsigned getSizeOfTuple(const vector<Attribute> &attrs,const void *data);
     	bool isNullField(const void *data, unsigned fieldNum);
+    	RC getOffsetNSizeOfAttr(const void* data, vector<Attribute> &attrs, string &attrName, int &offset, int &size);
+    	RC setNull(void *data, unsigned fieldNum);
+    	RC initializeNullIndicator(const vector<Attribute> &recordDescriptor,void *data);
+    	unsigned getSizeOfField(void *field, AttrType type);
+
 
 };
 
@@ -238,12 +243,9 @@ class Project : public Iterator {
         void getAttributes(vector<Attribute> &attrs)const;
 
         Iterator *iter;
-        string tableName;
-        vector<ExtractedAttr> extractedDataDescriptor;
         vector<Attribute> attrs;
-        vector<string> attrNamesToProject;
+        vector <Attribute> attrsFromIter;
 
-        RC projectData(vector<ExtractedAttr> &extractedDataDescriptor, char *recordToRead, void *data);
 };
 
 // Optional for the undergraduate solo teams: 5 extra-credit points
@@ -300,9 +302,10 @@ class INLJoin : public Iterator {
     	IndexScan *rightIter;
     	vector<Attribute> lAttrs;
     	vector<Attribute> rAttrs;
+    	vector<Attribute> attrs;
 
     	bool joinSatisfied(void *leftTuple,void *rightTuple);
-    	RC concaternate(void *data,void *leftTuple, void *rightTuple);
+    	RC concaternate(void *data,const void *leftTuple, const void *rightTuple);
 };
 
 // Optional for everyone. 10 extra-credit points
