@@ -36,7 +36,7 @@ RC Filter::getNextTuple(void *data)
 			string value;
 			if(getValueOfAttr(data, attrs, cond.lhsAttr, value) != 0)
 			{
-				cout << "ERRORINT" << endl;
+				cout << "ERRORCHAR" << endl;
 				return -1;
 			}
 			if(cond.bRhsIsAttr == true)
@@ -92,7 +92,7 @@ RC Filter::getNextTuple(void *data)
 		}
 
 	}
-	return -1;
+	return QE_EOF;
 }
 
 
@@ -121,18 +121,20 @@ BNLJoin::BNLJoin(Iterator *leftIn,            // Iterator of input R
 		hasMore = true;
 		readLeftBlock();
 	}
+
+	for(unsigned int i = 0; i < leftAttrs.size(); i++)
+	{
+		attrs.push_back(leftAttrs.at(i));
+	}
+	for(unsigned int i = 0; i < rightAttrs.size(); i++)
+	{
+		attrs.push_back(rightAttrs.at(i));
+	}
 }
 
 BNLJoin::~BNLJoin()
 {
-	for(unsigned i = 0; i < bufferV.size(); i++)
-	{
-		delete[] bufferV[i];
-	}
-	for(unsigned i = 0; i < otherTuples.size(); i++)
-	{
-		delete[] otherTuples[i].tuple;
-	}
+	free();
 }
 
 RC BNLJoin::getNextTuple(void *data)
@@ -141,7 +143,9 @@ RC BNLJoin::getNextTuple(void *data)
 	if(otherTuples.size() > 0)
 	{
 		memcpy(data, otherTuples.front().tuple, otherTuples.front().size);
+		delete[] otherTuples.front().tuple;
 		otherTuples.erase(otherTuples.begin());
+		cout << "FUCKFUCKFUCK" << endl;
 		return 0;
 	}
 
@@ -178,30 +182,50 @@ RC BNLJoin::getNextTuple(void *data)
 			cout << "ERROR" << endl;
 		}
 
+		//		/**************************______Check Tuple______****************************/
+		//		std::map<string, vector<TupleInfo> >::iterator got = tuplesMap.find(key);
+		//		if(got != tuplesMap.end())
+		//		{
+		//			TupleInfo tupleInfo = got->second.at(0);
+		//			join(data, tupleInfo, rightTuple, rTupleSize);
+		//			//FIXME:Here in the for loop store tuples in something to return later
+		//			for(unsigned i = 1; i < got->second.size(); i++)
+		//			{
+		//				TupleInfo tupleInfo = got->second.at(i);
+		//				char *otherTuple = new char[tupleInfo.size + rTupleSize];
+		//				join(otherTuple, tupleInfo, rightTuple, rTupleSize);
+		//				TupleInfo otherTupleInfo;
+		//				otherTupleInfo.tuple = otherTuple;
+		//				otherTupleInfo.size = tupleInfo.size + rTupleSize;
+		//				otherTuples.push_back(otherTupleInfo);
+		//			}
+		//			return 0;
+		//		}
+		//		else
+		//		{
+		//			//				vector<TupleInfo> v;
+		//			//				v.push_back(tupInfo);
+		//			//				tuplesMap.insert(std::pair<string, vector<TupleInfo> >(key, v));
+		//		}
+
 		/**************************______Check Tuple______****************************/
 		std::map<string, vector<TupleInfo> >::iterator got = tuplesMap.find(key);
 		if(got != tuplesMap.end())
 		{
 			TupleInfo tupleInfo = got->second.at(0);
-			join(data, tupleInfo, rightTuple, rTupleSize);
-			//FIXME:Here in the for loop store tuples in something to return later
+			concatenate(data, tupleInfo.tuple, rightTuple);
+			//rightIt->rm.printTuple(attrs, data);
 			for(unsigned i = 1; i < got->second.size(); i++)
 			{
 				TupleInfo tupleInfo = got->second.at(i);
 				char *otherTuple = new char[tupleInfo.size + rTupleSize];
-				join(otherTuple, tupleInfo, rightTuple, rTupleSize);
+				concatenate(otherTuple, tupleInfo.tuple, rightTuple);
 				TupleInfo otherTupleInfo;
 				otherTupleInfo.tuple = otherTuple;
 				otherTupleInfo.size = tupleInfo.size + rTupleSize;
 				otherTuples.push_back(otherTupleInfo);
 			}
 			return 0;
-		}
-		else
-		{
-			//				vector<TupleInfo> v;
-			//				v.push_back(tupInfo);
-			//				tuplesMap.insert(std::pair<string, vector<TupleInfo> >(key, v));
 		}
 
 	}
@@ -215,9 +239,43 @@ RC BNLJoin::getNextTuple(void *data)
 	return QE_EOF;
 }
 
+void BNLJoin::getAttributes(vector<Attribute> &attrs) const
+{
+	for(unsigned int i = 0; i < this->attrs.size(); i++)
+	{
+		attrs.push_back(this->attrs.at(i));
+	}
+}
+
 ////////////////////////////////////////////
 ///////////////HELPERS//////////////////////
 ////////////////////////////////////////////
+
+void BNLJoin::free()
+{
+	for(unsigned i = 0; i < bufferV.size(); i++)
+	{
+		delete[] bufferV[i];
+	}
+	bufferV.clear();
+
+	for(std::map<string, vector<TupleInfo> >::iterator it = tuplesMap.begin();
+			it != tuplesMap.end(); ++it)
+	{
+		for(unsigned i = 0; i < it->second.size(); i++)
+		{
+			delete[] it->second.at(i).tuple;
+		}
+	}
+	tuplesMap.clear();
+
+	for(unsigned i = 0; i < otherTuples.size(); i++)
+	{
+		delete[] otherTuples[i].tuple;
+	}
+	otherTuples.clear();
+	//cout << bufferV.size() << "-" << tuplesMap.size() << "-" << otherTuples.size() << endl;
+}
 
 void BNLJoin::join(void *data, TupleInfo &tupleInfo, void *rightTuple, unsigned rTupleSize)
 {
@@ -257,10 +315,59 @@ void BNLJoin::join(void *data, TupleInfo &tupleInfo, void *rightTuple, unsigned 
 
 }
 
+RC BNLJoin :: concatenate(void *data,const void *leftTuple,const void *rightTuple)
+{
+	//Null indicator initialization for concaternate tuple
+	char *nullIndicator = (char*)data;
+	char *dataFieldPtr = (char*)data + initializeNullIndicator(attrs,nullIndicator);
 
+	//Left tuple field preparation
+	unsigned numberOfFields = leftAttrs.size();
+	unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
+	char *lNullIndicator = (char*)leftTuple;
+	char *lDataFieldPtr = (char*)leftTuple + numberOfBytesForNullIndicator;
+
+	//Right tuple field preparation
+	numberOfFields = rightAttrs.size();
+	numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
+	char *rNullIndicator = (char*)rightTuple;
+	char *rDataFieldPtr = (char*)rightTuple + numberOfBytesForNullIndicator;
+
+	//first filled with left
+	for(unsigned i = 0 ; i < leftAttrs.size() ; i++)
+	{
+		if(isNullField(lNullIndicator,i))
+			setNull(nullIndicator,i);
+		else
+		{
+			int lSize = getSizeOfField(lDataFieldPtr,leftAttrs[i].type);
+			memcpy(dataFieldPtr, lDataFieldPtr, lSize);
+			dataFieldPtr = dataFieldPtr + lSize;
+			lDataFieldPtr = lDataFieldPtr + lSize;
+		}
+
+	}
+
+	//Next filled with right
+	for(unsigned i = 0 ; i < rightAttrs.size() ; i++)
+	{
+		if(isNullField(rNullIndicator,i))
+			setNull(nullIndicator,i+leftAttrs.size()); //Nullindicator is extended from left
+		else
+		{
+			int rSize = getSizeOfField(rDataFieldPtr,rightAttrs[i].type);
+			memcpy(dataFieldPtr, rDataFieldPtr, rSize);
+			dataFieldPtr = dataFieldPtr + rSize;
+			rDataFieldPtr = rDataFieldPtr + rSize;
+		}
+
+	}
+	return 0;
+}
 void BNLJoin::readLeftBlock()
 {
-	bufferV.clear();
+
+	free();
 	unsigned occupiedSpace = 0;
 	char tuple[WHOLE_SIZE_FOR_ENTRIES];
 	while(occupiedSpace <= totalBufferSize)
@@ -268,6 +375,7 @@ void BNLJoin::readLeftBlock()
 		if(leftIt->getNextTuple(tuple) != 0)
 		{
 			hasMore = false;
+			return;
 			//return something or just return;
 		}
 		unsigned tupleSize = getSizeOfTuple(leftAttrs, tuple);
@@ -574,26 +682,26 @@ RC Iterator::getValueOfAttr(const void* data, vector<Attribute> &attrs, string &
 
 RC Iterator::getOffsetNSizeOfAttr(const void* data, vector<Attribute> &attrs, string &attrName, int &offset, int &size)
 {
-    unsigned numberOfFields = attrs.size();
+	unsigned numberOfFields = attrs.size();
 
-    //exteriorRecord related
-    unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
-    unsigned char *nullsIndicator = (unsigned char*)data;
-    //char *exteriorRecordField = (char*)exteriorRecord + numberOfBytesForNullIndicator;
+	//exteriorRecord related
+	unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
+	unsigned char *nullsIndicator = (unsigned char*)data;
+	//char *exteriorRecordField = (char*)exteriorRecord + numberOfBytesForNullIndicator;
 
-    bool nullExist = false;
+	bool nullExist = false;
 
-    int exteriorRecordOffset = 0;
-    exteriorRecordOffset = exteriorRecordOffset + numberOfBytesForNullIndicator;
+	int exteriorRecordOffset = 0;
+	exteriorRecordOffset = exteriorRecordOffset + numberOfBytesForNullIndicator;
 
 
-    for (unsigned i = 0 ;i < numberOfFields ; i++)
-    {
-        unsigned positionOfByte = floor((double)i / 8);
-        unsigned positionOfNullIndicator = i % 8;
-        nullExist = nullsIndicator[positionOfByte] & (1 << (7 - positionOfNullIndicator));
+	for (unsigned i = 0 ;i < numberOfFields ; i++)
+	{
+		unsigned positionOfByte = floor((double)i / 8);
+		unsigned positionOfNullIndicator = i % 8;
+		nullExist = nullsIndicator[positionOfByte] & (1 << (7 - positionOfNullIndicator));
 
-        //target attr
+		//target attr
 		if(attrName.compare(attrs.at(i).name) == 0)
 		{
 			if(nullExist)
@@ -605,15 +713,15 @@ RC Iterator::getOffsetNSizeOfAttr(const void* data, vector<Attribute> &attrs, st
 
 			if(attrs[i].type == TypeInt)
 			{
-                offset = exteriorRecordOffset;
-                size = sizeof(int);
-                return 0;
+				offset = exteriorRecordOffset;
+				size = sizeof(int);
+				return 0;
 			}
 			else if(attrs[i].type ==TypeReal)
 			{
 				offset = exteriorRecordOffset;
 				size = sizeof(float);
-                return 0;
+				return 0;
 			}
 			else if(attrs[i].type ==TypeReal)
 			{
@@ -621,7 +729,7 @@ RC Iterator::getOffsetNSizeOfAttr(const void* data, vector<Attribute> &attrs, st
 				int stringLength_int = *((int*)stringLength);
 				offset = exteriorRecordOffset;
 				size = sizeof(int) + stringLength_int;
-                return 0;
+				return 0;
 			}
 		}
 		else
@@ -642,8 +750,8 @@ RC Iterator::getOffsetNSizeOfAttr(const void* data, vector<Attribute> &attrs, st
 			}
 		}
 
-    }
-    return -1;
+	}
+	return -1;
 }
 
 AttrType Iterator::getType(vector<Attribute> &attrs, string &attrName)
@@ -715,17 +823,17 @@ unsigned Iterator:: getSizeOfField(void *field, AttrType type)
 {
 	if(type == TypeInt)
 	{
-        return sizeof(int);
+		return sizeof(int);
 	}
 	else if(type ==TypeReal)
 	{
-        return sizeof(float);
+		return sizeof(float);
 	}
 	else if(type ==TypeReal)
 	{
 		char *stringLength = (char*)field;
 		int stringLength_int = *((int*)stringLength);
-        return sizeof(int) + stringLength_int;
+		return sizeof(int) + stringLength_int;
 	}
 
 	return 0;
@@ -795,8 +903,8 @@ RC Project ::getNextTuple(void *data) {
 
 void Project ::getAttributes(vector<Attribute> &attrs) const
 {
-    attrs.clear();
-    attrs = this->attrs;
+	attrs.clear();
+	attrs = this->attrs;
 }
 
 
@@ -813,12 +921,12 @@ INLJoin :: INLJoin(Iterator *leftIn, IndexScan *rightIn, const Condition &condit
 	leftIter->getAttributes(lAttrs);
 	rightIter->getAttributes(rAttrs);
 
-    //result attribute construction
+	//result attribute construction
 	attrs = lAttrs;
-    for(unsigned i = 0 ; i < rAttrs.size() ; i++)
-    {
-    	attrs.push_back(rAttrs[i]);
-    }
+	for(unsigned i = 0 ; i < rAttrs.size() ; i++)
+	{
+		attrs.push_back(rAttrs[i]);
+	}
 
 
 	for(unsigned i = 0 ; i < lAttrs.size() ; i++)
@@ -882,17 +990,17 @@ RC INLJoin :: concaternate(void *data,const void *leftTuple,const void *rightTup
 	char *nullIndicator = (char*)data;
 	char *dataFieldPtr = (char*)data + initializeNullIndicator(attrs,nullIndicator);
 
-    //Left tuple field preparation
+	//Left tuple field preparation
 	unsigned numberOfFields = lAttrs.size();
 	unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
 	char *lNullIndicator = (char*)leftTuple;
-    char *lDataFieldPtr = (char*)leftTuple + numberOfBytesForNullIndicator;
+	char *lDataFieldPtr = (char*)leftTuple + numberOfBytesForNullIndicator;
 
-    //Right tuple field preparation
+	//Right tuple field preparation
 	numberOfFields = rAttrs.size();
 	numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
 	char *rNullIndicator = (char*)rightTuple;
-    char *rDataFieldPtr = (char*)rightTuple + numberOfBytesForNullIndicator;
+	char *rDataFieldPtr = (char*)rightTuple + numberOfBytesForNullIndicator;
 
 	//first filled with left
 	for(unsigned i = 0 ; i < lAttrs.size() ; i++)
@@ -948,7 +1056,7 @@ RC INLJoin :: getNextTuple(void *data){
 }
 
 void INLJoin :: getAttributes(vector<Attribute> &attrs) const{
-    attrs.clear();
-    attrs = this->attrs;
+	attrs.clear();
+	attrs = this->attrs;
 }
 
