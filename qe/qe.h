@@ -248,6 +248,12 @@ class Project : public Iterator {
 
 };
 
+struct TupleInfo
+{
+  void *tuple;
+  unsigned size;
+};
+
 // Optional for the undergraduate solo teams: 5 extra-credit points
 class BNLJoin : public Iterator {
     // Block nested-loop join operator
@@ -260,9 +266,13 @@ class BNLJoin : public Iterator {
         );
         ~BNLJoin();
 
-        RC getNextTuple(void *data){return QE_EOF;};
+        RC getNextTuple(void *data);
         // For attribute in vector<Attribute>, name it as rel.attr
         void getAttributes(vector<Attribute> &attrs) const{};
+
+        void readLeftBlock();
+        void join(void *data, TupleInfo &tupleInfo,
+        		void *rightTuple, unsigned rTupleSize);
 
         Iterator *leftIt;
         TableScan *rightIt;
@@ -270,9 +280,13 @@ class BNLJoin : public Iterator {
         unsigned numPages;
         bool hasMore;
         unsigned totalBufferSize;
+        AttrType keyType;
+        vector<Attribute> leftAttrs;
+        vector<Attribute> rightAttrs;
         //char *buffer;
         vector<void *> bufferV;
-        //std::unordered_map<string, vector<unsigned> > tuplesMap;
+        vector<TupleInfo> otherTuples;
+        std::map<string, vector<TupleInfo> > tuplesMap;
 
 
 };
