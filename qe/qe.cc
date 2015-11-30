@@ -237,13 +237,10 @@ void BNLJoin::join(void *data, TupleInfo &tupleInfo, void *rightTuple, unsigned 
 		char *combination = new char[sizeOfNullIndicatorR + 1];
 		combination[0] = L;
 		memcpy(combination + 1, rightTuple, sizeOfNullIndicatorR);
-
-		for(unsigned i = 0; i < sizeOfNullIndicatorR + 1; i++)
-		{
-			combination[i] <<= (8 - leftAttrs.size()%8);
-		}
-
-		memcpy(((char *) data) + sizeOfNullIndicatorL - 1, combination, sizeOfNullIndicatorR + 1);
+		//FIXME
+		long comb = *(long *) combination;
+		comb <<= (8 - leftAttrs.size()%8);
+		memcpy(((char *) data) + sizeOfNullIndicatorL - 1, &comb, sizeOfNullIndicatorR + 1);
 		delete[] combination;
 	}
 	else
@@ -263,6 +260,7 @@ void BNLJoin::join(void *data, TupleInfo &tupleInfo, void *rightTuple, unsigned 
 
 void BNLJoin::readLeftBlock()
 {
+	bufferV.clear();
 	unsigned occupiedSpace = 0;
 	char tuple[WHOLE_SIZE_FOR_ENTRIES];
 	while(occupiedSpace <= totalBufferSize)
