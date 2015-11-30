@@ -317,6 +317,8 @@ class INLJoin : public Iterator {
     	vector<Attribute> lAttrs;
     	vector<Attribute> rAttrs;
     	vector<Attribute> attrs;
+    	char leftTuple[PAGE_SIZE];
+    	int lEOF;
 
     	bool joinSatisfied(void *leftTuple,void *rightTuple);
     	RC concaternate(void *data,const void *leftTuple, const void *rightTuple);
