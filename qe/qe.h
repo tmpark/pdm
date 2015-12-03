@@ -33,6 +33,12 @@ struct Condition {
     Value   rhsValue;       // right-hand side value if bRhsIsAttr = FALSE
 };
 
+struct AggInfo{
+	float min;
+	float max;
+	float sum;
+	float count;
+};
 
 class Iterator {
     // All the relational operators and access methods are iterators.
@@ -254,6 +260,8 @@ struct TupleInfo
   unsigned size;
 };
 
+
+
 // Optional for the undergraduate solo teams: 5 extra-credit points
 class BNLJoin : public Iterator {
     // Block nested-loop join operator
@@ -368,11 +376,20 @@ class Aggregate : public Iterator {
         // output attrname = "MAX(rel.attr)"
         void getAttributes(vector<Attribute> &attrs) const{attrs = this->attrs;};
 
+        RC gatherAggrInfo(void *returnedData,float value);
+        RC putGroupByResult(void *data,string tempKey,AggInfo tempAggInfo);
+
         AggregateOp op;
         Attribute aggAttr;
+        Attribute groupAttr;
         Iterator *iter;
         vector<Attribute> attrs;
         bool finished;
+        bool groupby;
+
+        std::map<string, AggInfo> aggrMap;
+        std::map<string,AggInfo>::iterator groupKeyIt;
+
 };
 
 #endif
