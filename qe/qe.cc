@@ -1073,3 +1073,128 @@ void INLJoin :: getAttributes(vector<Attribute> &attrs) const{
 	attrs = this->attrs;
 }
 
+
+
+Aggregate :: Aggregate(Iterator *input,          // Iterator of input R
+          Attribute aggAttr,        // The attribute over which we are computing an aggregate
+          AggregateOp op            // Aggregate operation
+)
+{
+	  this->op = op;
+	  this->aggAttr = aggAttr;
+	  this->iter = input;
+	  iter->getAttributes(attrs);
+	  finished = false;
+}
+
+
+Aggregate :: Aggregate(Iterator *input,             // Iterator of input R
+          Attribute aggAttr,           // The attribute over which we are computing an aggregate
+          Attribute groupAttr,         // The attribute over which we are grouping the tuples
+          AggregateOp op              // Aggregate operation
+)
+{
+	  this->op = op;
+	  this->aggAttr = aggAttr;
+	  this->iter = input;
+	  iter->getAttributes(attrs);
+	  finished = false;
+}
+
+//Min, Max, Count, Sum, Avg
+RC Aggregate ::getNextTuple(void *data){
+
+	if(finished)
+		return QE_EOF;
+
+    RC rc = -1;
+
+    char returnedData[PAGE_SIZE];
+
+    //First run
+    if(iter->getNextTuple(returnedData) == QE_EOF)
+    {
+    	char *nullIndicator = (char*)data;
+    	nullIndicator[0] = nullIndicator[0] | 1 << 7;
+    	finished = true;
+    	return QE_EOF;
+    }
+
+    float firstValue;
+
+	if(aggAttr.type == TypeInt)
+	{
+		int tempValue;
+		rc = getValueOfAttr(returnedData, attrs, aggAttr.name, tempValue);
+		firstValue = tempValue;
+	}
+	else if(aggAttr.type == TypeReal)
+	{
+		float tempValue;
+		rc = getValueOfAttr(returnedData, attrs, aggAttr.name, tempValue);
+		firstValue = tempValue;
+	}
+
+
+    float min = firstValue;
+    float max = firstValue;
+    float sum = firstValue;
+    float count = 1;
+
+
+    while(iter->getNextTuple(returnedData) != QE_EOF)
+    {
+
+    	float value;
+    	if(aggAttr.type == TypeInt)
+    	{
+    		int tempValue;
+    		rc = getValueOfAttr(returnedData, attrs, aggAttr.name, tempValue);
+    		value = tempValue;
+    	}
+    	else if(aggAttr.type == TypeReal)
+		{
+    		float tempValue;
+    		rc = getValueOfAttr(returnedData, attrs, aggAttr.name, tempValue);
+    		value = tempValue;
+		}
+
+
+
+    	if(op == MIN)
+    	{
+    		if(value < min)
+    			min = value;
+    	}
+    	else if(op == MAX)
+    	{
+    		if(value > max)
+    			max = value;
+    	}
+    	else if(op == SUM || op == AVG)
+    	{
+    		sum = sum + value;
+    	}
+    	count++;
+    }
+
+    float result = -1;
+
+    if(op == MIN)
+    	result = min;
+    else if(op == MAX)
+    	result = max;
+    else if(op == SUM)
+    	result = sum;
+    else if(op == AVG)
+    	result = sum / count;
+    else if(op == count)
+    	result = count;
+
+    memset((char*)data,0,1);
+    *(float*)((char*)data+1) = result;
+
+    finished = true;
+
+	return 0;
+}
