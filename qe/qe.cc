@@ -1085,6 +1085,8 @@ Aggregate :: Aggregate(Iterator *input,          // Iterator of input R
 	  this->iter = input;
 	  iter->getAttributes(attrs);
 	  finished = false;
+	  groupby = false;
+
 }
 
 
@@ -1097,17 +1099,131 @@ Aggregate :: Aggregate(Iterator *input,             // Iterator of input R
 	  this->op = op;
 	  this->aggAttr = aggAttr;
 	  this->iter = input;
+	  this->groupAttr = groupAttr;
+	  groupby = true;
 	  iter->getAttributes(attrs);
 	  finished = false;
+
 }
+
+
+RC Aggregate :: gatherAggrInfo(void *returnedData,float value)
+{
+	string groupKey;
+	if(groupAttr.type == TypeInt)
+	{
+		int tempGroupKey;
+		getValueOfAttr(returnedData,attrs,groupAttr.name,tempGroupKey);
+		char valueChar[64];
+		snprintf(valueChar, sizeof(valueChar), "%d", tempGroupKey);
+		groupKey = string(valueChar);
+
+	}
+	else if(groupAttr.type == TypeReal)
+	{
+		float tempGroupKey;
+		getValueOfAttr(returnedData,attrs,groupAttr.name,tempGroupKey);
+		char valueChar[64];
+		snprintf(valueChar, sizeof(valueChar), "%f", tempGroupKey);
+		groupKey = string(valueChar);
+	}
+	else if (groupAttr.type == TypeVarChar)
+	{
+		getValueOfAttr(returnedData,attrs,groupAttr.name,groupKey);
+	}
+
+	std::map<string,AggInfo>::iterator it;
+
+	it = aggrMap.find(groupKey);
+	if(it == aggrMap.end())
+	{
+		AggInfo tempAggInfo;
+		tempAggInfo.count = 1;
+		tempAggInfo.max = value;
+		tempAggInfo.min = value;
+		tempAggInfo.sum = value;
+		aggrMap.insert(std::pair<string,AggInfo>(groupKey,tempAggInfo));
+	}
+	else
+	{
+		it->second.count++;
+		it->second.sum = it->second.sum + value;
+		if(it->second.min > value)
+			it->second.min = value;
+		if(it->second.max < value)
+			it->second.max = value;
+	}
+	return 0;
+
+}
+
+
+RC Aggregate ::putGroupByResult(void *data,string key,AggInfo aggInfo)
+{
+
+	float result = -1;
+
+    if(op == MIN)
+    	result = aggInfo.min;
+    else if(op == MAX)
+    	result = aggInfo.max;
+    else if(op == SUM)
+    	result = aggInfo.sum;
+    else if(op == AVG)
+    	result = aggInfo.sum / aggInfo.count;
+    else if(op == COUNT)
+    	result = aggInfo.count;
+
+	unsigned offset = 0;
+
+	//put group key
+    memset((char*)data + offset,0,1);
+    offset = offset + 1;
+
+
+    if(groupAttr.type == TypeInt)
+    {
+    	int key_int = atoi(key.c_str());
+        memcpy((char*)data + offset, &key_int, sizeof(int));
+        offset = offset + sizeof(int);
+
+    }
+    else if(groupAttr.type == TypeReal)
+    {
+    	int key_float = atof(key.c_str());
+        memcpy((char*)data + offset, &key_float, sizeof(float));
+        offset = offset + sizeof(float);
+    }
+    else if(groupAttr.type == TypeVarChar)
+    {
+        memcpy((char*)data + offset, key.c_str(), key.size());
+        offset = offset + key.size();
+    }
+
+    //put result
+    memcpy((char*)data + offset, &result, sizeof(float));
+
+    return 0;
+
+}
+
 
 //Min, Max, Count, Sum, Avg
 RC Aggregate ::getNextTuple(void *data){
 
 	if(finished)
-		return QE_EOF;
-
-    RC rc = -1;
+	{
+		if(groupby && groupKeyIt != aggrMap.end())
+		{
+	    	string tempKey = groupKeyIt->first;
+	    	AggInfo tempAggInfo = groupKeyIt->second;
+	    	putGroupByResult(data,tempKey,tempAggInfo);
+	    	groupKeyIt++;
+	    	return 0;
+		}
+		else
+		    return QE_EOF;
+	}
 
     char returnedData[PAGE_SIZE];
 
@@ -1125,15 +1241,18 @@ RC Aggregate ::getNextTuple(void *data){
 	if(aggAttr.type == TypeInt)
 	{
 		int tempValue;
-		rc = getValueOfAttr(returnedData, attrs, aggAttr.name, tempValue);
+		getValueOfAttr(returnedData, attrs, aggAttr.name, tempValue);
 		firstValue = tempValue;
 	}
 	else if(aggAttr.type == TypeReal)
 	{
 		float tempValue;
-		rc = getValueOfAttr(returnedData, attrs, aggAttr.name, tempValue);
+		getValueOfAttr(returnedData, attrs, aggAttr.name, tempValue);
 		firstValue = tempValue;
 	}
+
+	if(groupby)
+	    gatherAggrInfo(returnedData,firstValue);
 
 
     float min = firstValue;
@@ -1149,51 +1268,53 @@ RC Aggregate ::getNextTuple(void *data){
     	if(aggAttr.type == TypeInt)
     	{
     		int tempValue;
-    		rc = getValueOfAttr(returnedData, attrs, aggAttr.name, tempValue);
+    		getValueOfAttr(returnedData, attrs, aggAttr.name, tempValue);
     		value = tempValue;
+
     	}
     	else if(aggAttr.type == TypeReal)
 		{
     		float tempValue;
-    		rc = getValueOfAttr(returnedData, attrs, aggAttr.name, tempValue);
+    		getValueOfAttr(returnedData, attrs, aggAttr.name, tempValue);
     		value = tempValue;
 		}
 
+    	if(groupby)
+    	    gatherAggrInfo(returnedData,value);
 
-
-    	if(op == MIN)
-    	{
-    		if(value < min)
-    			min = value;
-    	}
-    	else if(op == MAX)
-    	{
-    		if(value > max)
-    			max = value;
-    	}
-    	else if(op == SUM || op == AVG)
-    	{
-    		sum = sum + value;
-    	}
+    	if(value < min)
+    		min = value;
+    	if(value > max)
+    		max = value;
+    	sum = sum + value;
     	count++;
     }
 
     float result = -1;
 
-    if(op == MIN)
-    	result = min;
-    else if(op == MAX)
-    	result = max;
-    else if(op == SUM)
-    	result = sum;
-    else if(op == AVG)
-    	result = sum / count;
-    else if(op == count)
-    	result = count;
-
-    memset((char*)data,0,1);
-    *(float*)((char*)data+1) = result;
-
+    if(groupby)
+    {
+    	groupKeyIt = aggrMap.begin();
+    	string tempKey = groupKeyIt->first;
+    	AggInfo tempAggInfo = groupKeyIt->second;
+    	putGroupByResult(data,tempKey,tempAggInfo);
+    	groupKeyIt++;
+    }
+    else
+    {
+        if(op == MIN)
+        	result = min;
+        else if(op == MAX)
+        	result = max;
+        else if(op == SUM)
+        	result = sum;
+        else if(op == AVG)
+        	result = sum / count;
+        else if(op == COUNT)
+        	result = count;
+        memset((char*)data,0,1);
+        *(float*)((char*)data+1) = result;
+    }
     finished = true;
 
 	return 0;
