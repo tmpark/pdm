@@ -145,7 +145,6 @@ RC BNLJoin::getNextTuple(void *data)
 		memcpy(data, otherTuples.front().tuple, otherTuples.front().size);
 		delete[] otherTuples.front().tuple;
 		otherTuples.erase(otherTuples.begin());
-		cout << "FUCKFUCKFUCK" << endl;
 		return 0;
 	}
 
