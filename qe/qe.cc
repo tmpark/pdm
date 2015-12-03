@@ -33,64 +33,83 @@ RC Filter::getNextTuple(void *data)
 	{
 		if(type == TypeVarChar)
 		{
-			string value;
-			if(getValueOfAttr(data, attrs, cond.lhsAttr, value) != 0)
+			string valueLeft;
+			string valueRight;
+			if(getValueOfAttr(data, attrs, cond.lhsAttr, valueLeft) != 0)
 			{
 				cout << "ERRORCHAR" << endl;
 				return -1;
 			}
 			if(cond.bRhsIsAttr == true)
 			{
-				cout <<  "ERROR: Righthandside is attr" << endl;
-				return -1;
+				if(getValueOfAttr(data, attrs, cond.rhsAttr, valueRight) != 0)
+				{
+					cout << "ERRORCHAR" << endl;
+					return -1;
+				}
 			}
-			//FIXME: I think they assumed that they will not provide string in rhside
-			int *length = (int *)(cond.rhsValue.data);
-			string s((char *)(length + 1), *length);
-			if(compareValues(value, s, cond.op) == true)
+			else
+			{
+				int *length = (int *)(cond.rhsValue.data);
+				valueRight = string((char *)(length + 1), *length);
+			}
+			if(compareValues(valueLeft, valueRight, cond.op) == true)
 			{
 				return 0;
 			}
 		}
 		else if(type == TypeInt)
 		{
-			int value;
-			if(getValueOfAttr(data, attrs, cond.lhsAttr, value) != 0)
+			int valueL;
+			int valueR;
+			if(getValueOfAttr(data, attrs, cond.lhsAttr, valueL) != 0)
 			{
 				cout << "ERRORINT" << endl;
 				return -1;
 			}
 			if(cond.bRhsIsAttr == true)
 			{
-				cout <<  "ERROR: Righthandside is attr" << endl;
-				return -1;
+				if(getValueOfAttr(data, attrs, cond.rhsAttr, valueR) != 0)
+				{
+					cout << "ERRORCHAR" << endl;
+					return -1;
+				}
 			}
-			int a = *(int *)((cond.rhsValue).data);
-			int b = value;
-			if(compareValues(value, *(int *)((cond.rhsValue).data), cond.op) == true)
+			else
+			{
+				valueR = *(int *)((cond.rhsValue).data);
+			}
+			if(compareValues(valueL, valueR, cond.op) == true)
 			{
 				return 0;
 			}
 		}
 		else if(type == TypeReal)
 		{
-			float value;
-			if(getValueOfAttr(data, attrs, cond.lhsAttr, value) != 0)
+			float valueL;
+			float valueR;
+			if(getValueOfAttr(data, attrs, cond.lhsAttr, valueL) != 0)
 			{
-				cout << "ERRORREAL" << endl;
+				cout << "ERRORINT" << endl;
 				return -1;
 			}
 			if(cond.bRhsIsAttr == true)
 			{
-				cout <<  "ERROR: Righthandside is attr" << endl;
-				return -1;
+				if(getValueOfAttr(data, attrs, cond.rhsAttr, valueR) != 0)
+				{
+					cout << "ERRORCHAR" << endl;
+					return -1;
+				}
 			}
-			if(compareValues(value, *(float *)cond.rhsValue.data, cond.op) == true)
+			else
+			{
+				valueR = *(float *)((cond.rhsValue).data);
+			}
+			if(compareValues(valueL, valueR, cond.op) == true)
 			{
 				return 0;
 			}
 		}
-
 	}
 	return QE_EOF;
 }
@@ -1075,33 +1094,33 @@ void INLJoin :: getAttributes(vector<Attribute> &attrs) const{
 
 
 Aggregate :: Aggregate(Iterator *input,          // Iterator of input R
-          Attribute aggAttr,        // The attribute over which we are computing an aggregate
-          AggregateOp op            // Aggregate operation
+		Attribute aggAttr,        // The attribute over which we are computing an aggregate
+		AggregateOp op            // Aggregate operation
 )
 {
-	  this->op = op;
-	  this->aggAttr = aggAttr;
-	  this->iter = input;
-	  iter->getAttributes(attrs);
-	  finished = false;
-	  groupby = false;
+	this->op = op;
+	this->aggAttr = aggAttr;
+	this->iter = input;
+	iter->getAttributes(attrs);
+	finished = false;
+	groupby = false;
 
 }
 
 
 Aggregate :: Aggregate(Iterator *input,             // Iterator of input R
-          Attribute aggAttr,           // The attribute over which we are computing an aggregate
-          Attribute groupAttr,         // The attribute over which we are grouping the tuples
-          AggregateOp op              // Aggregate operation
+		Attribute aggAttr,           // The attribute over which we are computing an aggregate
+		Attribute groupAttr,         // The attribute over which we are grouping the tuples
+		AggregateOp op              // Aggregate operation
 )
 {
-	  this->op = op;
-	  this->aggAttr = aggAttr;
-	  this->iter = input;
-	  this->groupAttr = groupAttr;
-	  groupby = true;
-	  iter->getAttributes(attrs);
-	  finished = false;
+	this->op = op;
+	this->aggAttr = aggAttr;
+	this->iter = input;
+	this->groupAttr = groupAttr;
+	groupby = true;
+	iter->getAttributes(attrs);
+	finished = false;
 
 }
 
@@ -1162,47 +1181,47 @@ RC Aggregate ::putGroupByResult(void *data,string key,AggInfo aggInfo)
 
 	float result = -1;
 
-    if(op == MIN)
-    	result = aggInfo.min;
-    else if(op == MAX)
-    	result = aggInfo.max;
-    else if(op == SUM)
-    	result = aggInfo.sum;
-    else if(op == AVG)
-    	result = aggInfo.sum / aggInfo.count;
-    else if(op == COUNT)
-    	result = aggInfo.count;
+	if(op == MIN)
+		result = aggInfo.min;
+	else if(op == MAX)
+		result = aggInfo.max;
+	else if(op == SUM)
+		result = aggInfo.sum;
+	else if(op == AVG)
+		result = aggInfo.sum / aggInfo.count;
+	else if(op == COUNT)
+		result = aggInfo.count;
 
 	unsigned offset = 0;
 
 	//put group key
-    memset((char*)data + offset,0,1);
-    offset = offset + 1;
+	memset((char*)data + offset,0,1);
+	offset = offset + 1;
 
 
-    if(groupAttr.type == TypeInt)
-    {
-    	int key_int = atoi(key.c_str());
-        memcpy((char*)data + offset, &key_int, sizeof(int));
-        offset = offset + sizeof(int);
+	if(groupAttr.type == TypeInt)
+	{
+		int key_int = atoi(key.c_str());
+		memcpy((char*)data + offset, &key_int, sizeof(int));
+		offset = offset + sizeof(int);
 
-    }
-    else if(groupAttr.type == TypeReal)
-    {
-    	int key_float = atof(key.c_str());
-        memcpy((char*)data + offset, &key_float, sizeof(float));
-        offset = offset + sizeof(float);
-    }
-    else if(groupAttr.type == TypeVarChar)
-    {
-        memcpy((char*)data + offset, key.c_str(), key.size());
-        offset = offset + key.size();
-    }
+	}
+	else if(groupAttr.type == TypeReal)
+	{
+		int key_float = atof(key.c_str());
+		memcpy((char*)data + offset, &key_float, sizeof(float));
+		offset = offset + sizeof(float);
+	}
+	else if(groupAttr.type == TypeVarChar)
+	{
+		memcpy((char*)data + offset, key.c_str(), key.size());
+		offset = offset + key.size();
+	}
 
-    //put result
-    memcpy((char*)data + offset, &result, sizeof(float));
+	//put result
+	memcpy((char*)data + offset, &result, sizeof(float));
 
-    return 0;
+	return 0;
 
 }
 
@@ -1214,28 +1233,28 @@ RC Aggregate ::getNextTuple(void *data){
 	{
 		if(groupby && groupKeyIt != aggrMap.end())
 		{
-	    	string tempKey = groupKeyIt->first;
-	    	AggInfo tempAggInfo = groupKeyIt->second;
-	    	putGroupByResult(data,tempKey,tempAggInfo);
-	    	groupKeyIt++;
-	    	return 0;
+			string tempKey = groupKeyIt->first;
+			AggInfo tempAggInfo = groupKeyIt->second;
+			putGroupByResult(data,tempKey,tempAggInfo);
+			groupKeyIt++;
+			return 0;
 		}
 		else
-		    return QE_EOF;
+			return QE_EOF;
 	}
 
-    char returnedData[PAGE_SIZE];
+	char returnedData[PAGE_SIZE];
 
-    //First run
-    if(iter->getNextTuple(returnedData) == QE_EOF)
-    {
-    	char *nullIndicator = (char*)data;
-    	nullIndicator[0] = nullIndicator[0] | 1 << 7;
-    	finished = true;
-    	return QE_EOF;
-    }
+	//First run
+	if(iter->getNextTuple(returnedData) == QE_EOF)
+	{
+		char *nullIndicator = (char*)data;
+		nullIndicator[0] = nullIndicator[0] | 1 << 7;
+		finished = true;
+		return QE_EOF;
+	}
 
-    float firstValue;
+	float firstValue;
 
 	if(aggAttr.type == TypeInt)
 	{
@@ -1251,70 +1270,70 @@ RC Aggregate ::getNextTuple(void *data){
 	}
 
 	if(groupby)
-	    gatherAggrInfo(returnedData,firstValue);
+		gatherAggrInfo(returnedData,firstValue);
 
 
-    float min = firstValue;
-    float max = firstValue;
-    float sum = firstValue;
-    float count = 1;
+	float min = firstValue;
+	float max = firstValue;
+	float sum = firstValue;
+	float count = 1;
 
 
-    while(iter->getNextTuple(returnedData) != QE_EOF)
-    {
+	while(iter->getNextTuple(returnedData) != QE_EOF)
+	{
 
-    	float value;
-    	if(aggAttr.type == TypeInt)
-    	{
-    		int tempValue;
-    		getValueOfAttr(returnedData, attrs, aggAttr.name, tempValue);
-    		value = tempValue;
-
-    	}
-    	else if(aggAttr.type == TypeReal)
+		float value;
+		if(aggAttr.type == TypeInt)
 		{
-    		float tempValue;
-    		getValueOfAttr(returnedData, attrs, aggAttr.name, tempValue);
-    		value = tempValue;
+			int tempValue;
+			getValueOfAttr(returnedData, attrs, aggAttr.name, tempValue);
+			value = tempValue;
+
+		}
+		else if(aggAttr.type == TypeReal)
+		{
+			float tempValue;
+			getValueOfAttr(returnedData, attrs, aggAttr.name, tempValue);
+			value = tempValue;
 		}
 
-    	if(groupby)
-    	    gatherAggrInfo(returnedData,value);
+		if(groupby)
+			gatherAggrInfo(returnedData,value);
 
-    	if(value < min)
-    		min = value;
-    	if(value > max)
-    		max = value;
-    	sum = sum + value;
-    	count++;
-    }
+		if(value < min)
+			min = value;
+		if(value > max)
+			max = value;
+		sum = sum + value;
+		count++;
+	}
 
-    float result = -1;
+	float result = -1;
 
-    if(groupby)
-    {
-    	groupKeyIt = aggrMap.begin();
-    	string tempKey = groupKeyIt->first;
-    	AggInfo tempAggInfo = groupKeyIt->second;
-    	putGroupByResult(data,tempKey,tempAggInfo);
-    	groupKeyIt++;
-    }
-    else
-    {
-        if(op == MIN)
-        	result = min;
-        else if(op == MAX)
-        	result = max;
-        else if(op == SUM)
-        	result = sum;
-        else if(op == AVG)
-        	result = sum / count;
-        else if(op == COUNT)
-        	result = count;
-        memset((char*)data,0,1);
-        *(float*)((char*)data+1) = result;
-    }
-    finished = true;
+	if(groupby)
+	{
+		groupKeyIt = aggrMap.begin();
+		string tempKey = groupKeyIt->first;
+		AggInfo tempAggInfo = groupKeyIt->second;
+		putGroupByResult(data,tempKey,tempAggInfo);
+		groupKeyIt++;
+	}
+	else
+	{
+		if(op == MIN)
+			result = min;
+		else if(op == MAX)
+			result = max;
+		else if(op == SUM)
+			result = sum;
+		else if(op == AVG)
+			result = sum / count;
+		else if(op == COUNT)
+			result = count;
+		memset((char*)data,0,1);
+		*(float*)((char*)data+1) = result;
+	}
+	finished = true;
 
 	return 0;
 }
