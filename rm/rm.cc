@@ -63,6 +63,9 @@ RelationManager::RelationManager()
 
 RelationManager::~RelationManager()
 {
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+	rbfm->closeFile(tabFileHandle);
+	rbfm->closeFile(colFileHandle);
 }
 
 RC RelationManager::createCatalog()
@@ -579,6 +582,7 @@ RC RelationManager::insertTuple(const string &tableName, const void *data, RID &
 				rc = ixm->insertEntry(ixFileHandle,attrVector[i],key,rid);
 				if(rc == -1)
 					return -1; //insert entry failed
+				ixm->closeFile(ixFileHandle);
 			}
 
 			//Next field
@@ -632,8 +636,48 @@ RC RelationManager::deleteTuple(const string &tableName, const RID &rid)
 	{
 		FileHandle fileHandle;
 		rbfm->openFile(tableName,fileHandle);
+
+		char previousTuple[PAGE_SIZE];
+		rc = readTuple(tableName,rid,previousTuple);
+		if(rc == -1)
+			return -1;
 		rbfm->deleteRecord(fileHandle, attrVector, rid);
 		rbfm->closeFile(fileHandle);
+
+		//Delete indexEntry
+		unsigned numberOfFields = attrVector.size();
+		unsigned nullFieldBytes = ceil((float)numberOfFields/8);
+		char *dataField = previousTuple + nullFieldBytes;
+
+		IXFileHandle ixFileHandle;
+		for(unsigned i = 0 ; i < numberOfFields ; i++)
+		{
+			if(rbfm->isNullField(previousTuple,i))
+				continue;
+
+			string indexName = IX_INDICATOR + attrVector[i].name + "_" + tableName;
+			rc = ixm->openFile(indexName,ixFileHandle);
+			if(rc != -1)
+			{
+				ixm->deleteEntry(ixFileHandle,attrVector[i],dataField,rid);
+				ixm->closeFile(ixFileHandle);
+			}
+
+			if(attrVector[i].type == TypeInt)
+			{
+				dataField = dataField + sizeof(int);
+			}
+			else if(attrVector[i].type == TypeReal)
+			{
+				dataField = dataField + sizeof(float);
+			}
+			else if(attrVector[i].type == TypeVarChar)
+			{
+				int varCharSize = *(int*)dataField;
+				dataField = dataField + sizeof(int) + varCharSize;
+			}
+		}
+
 
 	}
 	return 0;
@@ -648,6 +692,8 @@ RC RelationManager::updateTuple(const string &tableName, const void *data, const
 	}
 
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+	IndexManager *ixm = IndexManager :: instance();
+
 	vector<Attribute> attrVector;
 
 	RC rc =getAttributes(tableName, attrVector);
@@ -668,8 +714,76 @@ RC RelationManager::updateTuple(const string &tableName, const void *data, const
 	{
 		FileHandle fileHandle;
 		rbfm->openFile(tableName,fileHandle);
+
+		char previousTuple[PAGE_SIZE];
+		rc = readTuple(tableName,rid,previousTuple);
+		if(rc == -1)
+			return -1;
+
 		rbfm->updateRecord(fileHandle, attrVector, data, rid);
 		rbfm->closeFile(fileHandle);
+
+		//Delete indexEntry
+		unsigned numberOfFields = attrVector.size();
+		unsigned nullFieldBytes = ceil((float)numberOfFields/8);
+		char *dataField = previousTuple + nullFieldBytes;
+		char *newDataField = (char*)data + nullFieldBytes;
+
+		IXFileHandle ixFileHandle;
+		for(unsigned i = 0 ; i < numberOfFields ; i++)
+		{
+			if(!rbfm->isNullField(previousTuple,i))
+			{
+
+			    string indexName = IX_INDICATOR + attrVector[i].name + "_" + tableName;
+			    rc = ixm->openFile(indexName,ixFileHandle);
+			    if(rc != -1)
+			    {
+				    ixm->deleteEntry(ixFileHandle,attrVector[i],dataField,rid);
+
+				    if(!rbfm->isNullField(data,i))
+				    	ixm->insertEntry(ixFileHandle,attrVector[i],newDataField,rid);
+
+				    ixm->closeFile(ixFileHandle);
+			    }
+
+			    //Next previous data
+				if(attrVector[i].type == TypeInt)
+				{
+					dataField = dataField + sizeof(int);
+				}
+				else if(attrVector[i].type == TypeReal)
+				{
+					dataField = dataField + sizeof(float);
+				}
+				else if(attrVector[i].type == TypeVarChar)
+				{
+					int varCharSize = *(int*)dataField;
+					dataField = dataField + sizeof(int) + varCharSize;
+				}
+			}
+
+
+			if(!rbfm->isNullField(data,i))
+			{
+				//Next New Data
+				if(attrVector[i].type == TypeInt)
+				{
+					newDataField = newDataField + sizeof(int);
+				}
+				else if(attrVector[i].type == TypeReal)
+				{
+					newDataField = newDataField + sizeof(float);
+				}
+				else if(attrVector[i].type == TypeVarChar)
+				{
+					int varCharSize = *(int*)newDataField;
+					newDataField = newDataField + sizeof(int) + varCharSize;
+				}
+			}
+
+		}
+
 	}
 
 	return 0;
@@ -771,17 +885,20 @@ RC RelationManager::scan(const string &tableName,
 
 	if(tableName.compare(string(TABLES_TABLE_NAME)) == 0)
 	{
+		rm_ScanIterator.catalogFile = true;
 		rc = rbfm->scan(tabFileHandle,attrs, conditionAttribute,
 				compOp, value, attributeNames, rm_ScanIterator.rbfm_scanIterator);
 
 	}
 	else if(tableName.compare(string(COLUMNS_TABLE_NAME)) == 0)
 	{
+		rm_ScanIterator.catalogFile = true;
 		rc = rbfm->scan(colFileHandle, attrs, conditionAttribute,
 				compOp, value, attributeNames, rm_ScanIterator.rbfm_scanIterator);
 	}
 	else
 	{
+		rm_ScanIterator.catalogFile = false;
 		rc = rbfm->openFile(tableName,rm_ScanIterator.fileHandle);
 		rc = rbfm->scan(rm_ScanIterator.fileHandle, attrs, conditionAttribute,
 				compOp, value, attributeNames, rm_ScanIterator.rbfm_scanIterator);

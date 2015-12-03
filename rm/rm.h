@@ -20,15 +20,24 @@ using namespace std;
 // RM_ScanIterator is an iteratr to go through tuples
 class RM_ScanIterator {
 public:
-  RM_ScanIterator() {};
+  RM_ScanIterator() {catalogFile = false;};
   ~RM_ScanIterator() {};
 
   // "data" follows the same format as RelationManager::insertTuple()
   RC getNextTuple(RID &rid, void *data){return rbfm_scanIterator.getNextRecord(rid,data);};
-  RC close(){RC rc = -1; rc = rbfm_scanIterator.close();return rc;};
+  RC close(){
+	  RC rc = -1;
+	  rc = rbfm_scanIterator.close();
+	  RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+	  if(!catalogFile)
+		  rbfm->closeFile(fileHandle);
+
+	  return rc;
+  };
 
   RBFM_ScanIterator rbfm_scanIterator;
   FileHandle fileHandle;
+  bool catalogFile;
 };
 
 // RM_IndexScanIterator is an iterator to go through index entries
@@ -39,10 +48,17 @@ class RM_IndexScanIterator {
 
   // "key" follows the same format as in IndexManager::insertEntry()
   RC getNextEntry(RID &rid, void *key) {return ix_scanIterator.getNextEntry(rid,key);};  	// Get next matching entry
-  RC close() {RC rc = -1; rc = ix_scanIterator.close();return rc;};  // Terminate index scan
+  RC close() {
+	  RC rc = -1;
+      rc = ix_scanIterator.close();
+      IndexManager *ixm = IndexManager :: instance();
+      ixm->closeFile(ixFileHandle);
+      return rc;
+  };  // Terminate index scan
 
   IX_ScanIterator ix_scanIterator;
   IXFileHandle ixFileHandle;
+
 };
 
 

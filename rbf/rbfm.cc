@@ -1596,6 +1596,9 @@ RC RBFM_ScanIterator::close()
 {
 	RC rc = 0;
 
+
+
+
 	free(tempPage);
 	free(tempPage1);
 
