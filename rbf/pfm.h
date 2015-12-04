@@ -1,7 +1,7 @@
 #ifndef _pfm_h_
 #define _pfm_h_
 
-typedef unsigned PageNum;
+typedef signed int PageNum;
 typedef int RC;
 typedef char byte;
 

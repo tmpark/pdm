@@ -99,6 +99,7 @@ RC PagedFileManager::closeFile(FileHandle &fileHandle)
     if(file_to_close->is_open())
     {
     	file_to_close->close();
+    	fileHandle.setFileStream(NULL);
     	return 0;
     }
 
