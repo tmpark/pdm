@@ -277,14 +277,6 @@ void BNLJoin::free()
 	}
 	bufferV.clear();
 
-	for(std::map<string, vector<TupleInfo> >::iterator it = tuplesMap.begin();
-			it != tuplesMap.end(); ++it)
-	{
-		for(unsigned i = 0; i < it->second.size(); i++)
-		{
-			delete[] it->second.at(i).tuple;
-		}
-	}
 	tuplesMap.clear();
 
 	for(unsigned i = 0; i < otherTuples.size(); i++)
@@ -1337,3 +1329,348 @@ RC Aggregate ::getNextTuple(void *data){
 
 	return 0;
 }
+
+
+int GHJoin :: hash(const std::string &data) {
+  int h(0);
+  for (int i=0; i < (int)data.length(); i++)
+    h = (h << 6) ^ (h >> 26) ^ data[i];
+  return h;
+}
+
+GHJoin :: GHJoin(Iterator *leftIn,               // Iterator of input R
+           Iterator *rightIn,               // Iterator of input S
+           const Condition &condition,      // Join condition (CompOp is always EQ)
+           const unsigned numPartitions     // # of partitions for each relation (decided by the optimizer)
+     )
+{
+	op = condition.op;
+	leftIter = leftIn;
+	rightIter = rightIn;
+	numOfPartitions = numPartitions;
+	leftAttr = condition.lhsAttr;
+	rightAttr = condition.rhsAttr;
+	leftIter->getAttributes(lAttrs);
+	rightIter->getAttributes(rAttrs);
+	currentPartition = 0;
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+	RC rc = -1;
+
+	attrs = lAttrs;
+
+
+	for(unsigned i = 0 ; i < rAttrs.size() ; i++)
+	{
+		attrs.push_back(rAttrs[i]);
+	}
+
+	for(unsigned i = 0 ; i < lAttrs.size() ; i++)
+	{
+		lAttributeNames.push_back(lAttrs[i].name);
+
+		if(lAttrs[i].name == leftAttr)
+		{
+			leftAttrType = lAttrs[i].type;
+		}
+	}
+
+	for(unsigned i = 0 ; i < rAttrs.size() ; i++)
+	{
+		rAttributeNames.push_back(rAttrs[i].name);
+		if(rAttrs[i].name == rightAttr)
+		{
+			rightAttrType = rAttrs[i].type;
+		}
+	}
+
+	//Partition file creation
+	for (unsigned i = 0  ; i < numPartitions ; i++)
+	{
+		char valueChar[64];
+		snprintf(valueChar, sizeof(valueChar), "%d", i);
+		string partitionNum = string(valueChar);
+
+		string leftPartition = GH_LEFT + partitionNum + "_" + leftAttr;
+		string rightPartition = GH_RIGHT + partitionNum + "_" + rightAttr;
+		rc = rbfm->createFile(leftPartition);
+		rc = rbfm->createFile(rightPartition);
+	}
+
+	//left tuple insert
+	char tupleTemp[PAGE_SIZE];
+
+	//prepare for left partition
+	while(leftIn->getNextTuple(tupleTemp) != QE_EOF)
+	{
+		string leftKey;
+		if(leftAttrType == TypeInt)
+		{
+			int tempGroupKey;
+			getValueOfAttr(tupleTemp,lAttrs,leftAttr,tempGroupKey);
+			char valueChar[64];
+			snprintf(valueChar, sizeof(valueChar), "%d", tempGroupKey);
+			leftKey = string(valueChar);
+
+		}
+		else if(leftAttrType == TypeReal)
+		{
+			float tempGroupKey;
+			getValueOfAttr(tupleTemp,lAttrs,leftAttr,tempGroupKey);
+			char valueChar[64];
+			snprintf(valueChar, sizeof(valueChar), "%f", tempGroupKey);
+			leftKey = string(valueChar);
+		}
+		else if(leftAttrType == TypeVarChar)
+		{
+			getValueOfAttr(tupleTemp,lAttrs,leftAttr,leftKey);
+		}
+		int hashValue = hash(leftKey)%numOfPartitions;
+		char valueChar[64];
+		snprintf(valueChar, sizeof(valueChar), "%d", hashValue);
+		string partitionNum = string(valueChar);
+		string targetGHFile = GH_LEFT + partitionNum + "_" + leftAttr;
+
+		FileHandle fileHandle;
+		RID rid;
+		rc = rbfm->openFile(targetGHFile,fileHandle);
+		rc = rbfm->insertRecord(fileHandle,lAttrs,tupleTemp,rid);
+		rc = rbfm->closeFile(fileHandle);
+	}
+
+	//prepare for right partition
+	while(rightIn->getNextTuple(tupleTemp) != QE_EOF)
+	{
+		string rightKey;
+		if(rightAttrType == TypeInt)
+		{
+			int tempGroupKey;
+			getValueOfAttr(tupleTemp,rAttrs,rightAttr,tempGroupKey);
+			char valueChar[64];
+			snprintf(valueChar, sizeof(valueChar), "%d", tempGroupKey);
+			rightKey = string(valueChar);
+
+		}
+		else if(rightAttrType == TypeReal)
+		{
+			float tempGroupKey;
+			getValueOfAttr(tupleTemp,rAttrs,rightAttr,tempGroupKey);
+			char valueChar[64];
+			snprintf(valueChar, sizeof(valueChar), "%f", tempGroupKey);
+			rightKey = string(valueChar);
+		}
+		else if(rightAttrType == TypeVarChar)
+		{
+			getValueOfAttr(tupleTemp,rAttrs,rightAttr,rightKey);
+		}
+		int hashValue = hash(rightKey)%numOfPartitions;
+		char valueChar[64];
+		snprintf(valueChar, sizeof(valueChar), "%d", hashValue);
+		string partitionNum = string(valueChar);
+		string targetGHFile = GH_RIGHT + partitionNum + "_" + rightAttr;
+
+		FileHandle fileHandle;
+		RID rid;
+		rc = rbfm->openFile(targetGHFile,fileHandle);
+		rc = rbfm->insertRecord(fileHandle,rAttrs,tupleTemp,rid);
+		rc = rbfm->closeFile(fileHandle);
+	}
+
+	char valueChar[64];
+	snprintf(valueChar, sizeof(valueChar), "%d", currentPartition);
+	string partitionNum = string(valueChar);
+	string targetGHFile = GH_LEFT + partitionNum + "_" + leftAttr;
+	rc = rbfm->openFile(targetGHFile,leftPartition_fileHandle);
+	rc = rbfm->scan(leftPartition_fileHandle,lAttrs,"",NO_OP,NULL,lAttributeNames,leftPartition_ScanIterator);
+
+	targetGHFile = GH_RIGHT + partitionNum + "_" + rightAttr;
+	rc = rbfm->openFile(targetGHFile,rightPartition_fileHandle);
+	rc = rbfm->scan(rightPartition_fileHandle,rAttrs,"",NO_OP,NULL,rAttributeNames,rightPartition_ScanIterator);
+
+	RID rid;
+	lEOF = leftPartition_ScanIterator.getNextRecord(rid,leftTuple);
+
+}
+
+RC GHJoin ::getNextTuple(void *data)
+{
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+
+	RC rc = -1;
+
+	if(lEOF != QE_EOF)
+	{
+		rc = _getNextTuple(data);
+		if(rc == 0)
+				return 0;
+		else
+			currentPartition++;
+	}
+
+	while(currentPartition < numOfPartitions)
+	{
+		//Reset;
+		rightPartition_ScanIterator.close();
+		rbfm->closeFile(rightPartition_fileHandle);
+		leftPartition_ScanIterator.close();
+		rbfm->closeFile(leftPartition_fileHandle);
+
+		char valueChar[64];
+		snprintf(valueChar, sizeof(valueChar), "%d", currentPartition);
+		string partitionNum = string(valueChar);
+		string targetGHFile = GH_LEFT + partitionNum + "_" + leftAttr;
+		rc = rbfm->openFile(targetGHFile,leftPartition_fileHandle);
+		rc = rbfm->scan(leftPartition_fileHandle,lAttrs,"",NO_OP,NULL,lAttributeNames,leftPartition_ScanIterator);
+
+		targetGHFile = GH_RIGHT + partitionNum + "_" + rightAttr;
+		rc = rbfm->openFile(targetGHFile,rightPartition_fileHandle);
+		rc = rbfm->scan(rightPartition_fileHandle,rAttrs,"",NO_OP,NULL,rAttributeNames,rightPartition_ScanIterator);
+
+		RID rid;
+		lEOF = leftPartition_ScanIterator.getNextRecord(rid,leftTuple);
+		rc = _getNextTuple(data);
+		if(rc == 0)
+			return 0;
+		else
+			currentPartition++;
+	}
+
+    return QE_EOF;
+}
+
+RC GHJoin ::_getNextTuple(void *data)
+{
+	RID rid;
+	RC rc = -1;
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+	char rightTuple[PAGE_SIZE];
+
+	while(!lEOF)
+	{
+		while(rightPartition_ScanIterator.getNextRecord(rid,rightTuple) != QE_EOF)
+		{
+			//attribute extract;
+			if(joinSatisfied(leftTuple,rightTuple))
+			{
+				RC rc = concaternate(data,leftTuple,rightTuple);
+				return rc;
+			}
+		}
+
+		lEOF = leftPartition_ScanIterator.getNextRecord(rid,leftTuple);
+
+		//re-initialize right scaniterator
+		if(lEOF != QE_EOF)
+		{
+			rightPartition_ScanIterator.close();
+			char valueChar[64];
+			snprintf(valueChar, sizeof(valueChar), "%d", currentPartition);
+			string partitionNum = string(valueChar);
+			string targetGHFile = GH_RIGHT + partitionNum + "_" + rightAttr;
+			rc = rbfm->scan(rightPartition_fileHandle,rAttrs,"",NO_OP,NULL,rAttributeNames,rightPartition_ScanIterator);
+		}
+	}
+
+	return QE_EOF;
+}
+
+
+
+bool GHJoin :: joinSatisfied(void *leftTuple,void *rightTuple)
+{
+
+	if(leftAttrType == TypeInt && rightAttrType == TypeInt)
+	{
+		int lValue = -1;
+		int rValue = -1;
+		getValueOfAttr(leftTuple,lAttrs,leftAttr,lValue);
+		getValueOfAttr(rightTuple,rAttrs,rightAttr,rValue);
+		return compareValues(lValue,rValue,op);
+	}
+	else if(leftAttrType == TypeReal && rightAttrType == TypeReal)
+	{
+		float lValue = -1;
+		float rValue = -1;
+		getValueOfAttr(leftTuple,lAttrs,leftAttr,lValue);
+		getValueOfAttr(rightTuple,rAttrs,rightAttr,rValue);
+		return compareValues(lValue,rValue,op);
+	}
+	else if(leftAttrType == TypeVarChar && rightAttrType == TypeVarChar)
+	{
+		string lValue;
+		string rValue;
+		getValueOfAttr(leftTuple,lAttrs,leftAttr,lValue);
+		getValueOfAttr(rightTuple,rAttrs,rightAttr,rValue);
+		return compareValues(lValue,rValue,op);
+	}
+
+	return false;
+}
+
+RC GHJoin :: concaternate(void *data,const void *leftTuple,const void *rightTuple)
+{
+	//Null indicator initialization for concaternate tuple
+	char *nullIndicator = (char*)data;
+	char *dataFieldPtr = (char*)data + initializeNullIndicator(attrs,nullIndicator);
+
+	//Left tuple field preparation
+	unsigned numberOfFields = lAttrs.size();
+	unsigned numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
+	char *lNullIndicator = (char*)leftTuple;
+	char *lDataFieldPtr = (char*)leftTuple + numberOfBytesForNullIndicator;
+
+	//Right tuple field preparation
+	numberOfFields = rAttrs.size();
+	numberOfBytesForNullIndicator = ceil((float)numberOfFields/8);
+	char *rNullIndicator = (char*)rightTuple;
+	char *rDataFieldPtr = (char*)rightTuple + numberOfBytesForNullIndicator;
+
+	//first filled with left
+	for(unsigned i = 0 ; i < lAttrs.size() ; i++)
+	{
+		if(isNullField(lNullIndicator,i))
+			setNull(nullIndicator,i);
+		else
+		{
+			int lSize = getSizeOfField(lDataFieldPtr,lAttrs[i].type);
+			memcpy(dataFieldPtr, lDataFieldPtr, lSize);
+			dataFieldPtr = dataFieldPtr + lSize;
+			lDataFieldPtr = lDataFieldPtr + lSize;
+		}
+
+	}
+
+	//Next filled with right
+	for(unsigned i = 0 ; i < rAttrs.size() ; i++)
+	{
+		if(isNullField(rNullIndicator,i))
+			setNull(nullIndicator,i+lAttrs.size()); //Nullindicator is extended from left
+		else
+		{
+			int rSize = getSizeOfField(rDataFieldPtr,rAttrs[i].type);
+			memcpy(dataFieldPtr, rDataFieldPtr, rSize);
+			dataFieldPtr = dataFieldPtr + rSize;
+			rDataFieldPtr = rDataFieldPtr + rSize;
+		}
+
+	}
+	return 0;
+}
+
+
+GHJoin :: ~GHJoin()
+{
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+
+	RC rc = -1;
+	for(unsigned i = 0 ; i < numOfPartitions ; i++)
+	{
+		char valueChar[64];
+		snprintf(valueChar, sizeof(valueChar), "%d", i);
+		string partitionNum = string(valueChar);
+		string leftPartition = GH_LEFT + partitionNum + "_" + leftAttr;
+		string rightPartition = GH_RIGHT + partitionNum + "_" + rightAttr;
+		rc = rbfm->destroyFile(leftPartition);
+		rc = rbfm->destroyFile(rightPartition);
+	}
+
+};

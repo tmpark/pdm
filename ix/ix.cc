@@ -2536,6 +2536,8 @@ RC IX_ScanIterator::close()
 	currentOverFlowSlot = 0;
 	free(tempPage);
 	free(tempOverFlowPage);
+	tempPage = NULL;
+	tempOverFlowPage = NULL;
 	return 0;
 }
 

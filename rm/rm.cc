@@ -575,14 +575,22 @@ RC RelationManager::insertTuple(const string &tableName, const void *data, RID &
 			IXFileHandle ixFileHandle;
 			rc = ixm->openFile(ixFileName,ixFileHandle);
 
+			//if(rc != 0)
+			//cout << "field : " << i << " insert tuple fail : " << endl;
+
 			//Index File exist (Should I change it to scan to search the file?)
 			if(rc == 0)
 			{
 				char *key = (char*)data + fieldOffset;
 				rc = ixm->insertEntry(ixFileHandle,attrVector[i],key,rid);
-				if(rc == -1)
-					return -1; //insert entry failed
+				//if(rc != 0)
+     			//	cout << "insert entry fail : " << endl;
 				ixm->closeFile(ixFileHandle);
+				if(rc == -1)
+				{
+					return -1; //insert entry failed
+				}
+
 			}
 
 			//Next field
@@ -657,9 +665,15 @@ RC RelationManager::deleteTuple(const string &tableName, const RID &rid)
 
 			string indexName = IX_INDICATOR + attrVector[i].name + "_" + tableName;
 			rc = ixm->openFile(indexName,ixFileHandle);
+
+			//if(rc != 0)
+			//    cout << "field : " << i << " delete tuple fail : " << endl;
+
 			if(rc != -1)
 			{
-				ixm->deleteEntry(ixFileHandle,attrVector[i],dataField,rid);
+				rc= ixm->deleteEntry(ixFileHandle,attrVector[i],dataField,rid);
+				//if(rc != 0)
+				 //   cout << "delete entry fail : " << endl;
 				ixm->closeFile(ixFileHandle);
 			}
 
@@ -737,12 +751,22 @@ RC RelationManager::updateTuple(const string &tableName, const void *data, const
 
 			    string indexName = IX_INDICATOR + attrVector[i].name + "_" + tableName;
 			    rc = ixm->openFile(indexName,ixFileHandle);
+
+				//if(rc != 0)
+				 //   cout << indexName << " field : " << i << " update tuple fail : " << endl;
+
 			    if(rc != -1)
 			    {
-				    ixm->deleteEntry(ixFileHandle,attrVector[i],dataField,rid);
+				    rc= ixm->deleteEntry(ixFileHandle,attrVector[i],dataField,rid);
+					//if(rc != 0)
+					 //   cout << "update delete entry fail : " << endl;
 
 				    if(!rbfm->isNullField(data,i))
-				    	ixm->insertEntry(ixFileHandle,attrVector[i],newDataField,rid);
+				    {
+				    	rc = ixm->insertEntry(ixFileHandle,attrVector[i],newDataField,rid);
+						//if(rc != 0)
+						 //   cout << "update insert entry fail : " << endl;
+				    }
 
 				    ixm->closeFile(ixFileHandle);
 			    }

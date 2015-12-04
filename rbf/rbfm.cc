@@ -1602,6 +1602,23 @@ RC RBFM_ScanIterator::close()
 	free(tempPage);
 	free(tempPage1);
 
+
+	extractedDataDescriptor.clear();
+
+	conditionAttrFieldNum = -1;
+    conditionAttrFieldType = TypeInt;
+	currentPageNum = 0;
+	currentPage = NULL;
+	currentRecordNum = 0;
+	currentRecord = NULL;
+	numOfPages = 0;
+	numOfRecords = 0;
+	fileHandle = NULL;
+	tempPage = NULL;
+	tempPage1 = NULL;
+	value = NULL;
+	compOp = NO_OP;
+
 	return rc;
 }
 
